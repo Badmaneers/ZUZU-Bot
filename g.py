@@ -63,7 +63,8 @@ def help_message(message):
                           "/roast - Want some spicy burns? 🔥\n"
                           "/motivate - Get a pep talk! 💪\n"
                           "/tea - Spill some gossip 😉\n"
-                          "/rules - See the group rules 📜")
+                          "/rules - See the group rules 📜\n"
+                          "/contribute - Help make me better! 🛠️")
 
 # Roast command
 @bot.message_handler(commands=['roast'])
@@ -90,6 +91,15 @@ def spill_tea(message):
 @bot.message_handler(commands=['rules'])
 def group_rules(message):
     bot.reply_to(message, "Rule #1: No spam. Rule #2: Be respectful. Rule #3: Have fun, but don’t test me. 😉")
+
+# Help contribute
+@bot.message_handler(commands=['contribute'])
+def contribute(message):
+    bot.reply_to(message, 
+                 "Want to contribute to my sass and moderation skills? 🛠️\n\n"
+                 "Check out my GitHub repository: [https://github.com/Badmaneers/Mod-Queen-Bot]\n"
+                 "Feel free to submit issues, suggest new features, or fork the repo and make pull requests!\n\n"
+                 "Every contribution helps make me even better! 🚀")
 
 @bot.message_handler(func=lambda message: message.text and message.text.strip() != "")
 def auto_moderate(message):
