@@ -33,6 +33,15 @@ def load_from_file(filename, default_list=None):
         print(f"Error loading {filename}: {e}")
         return default_list or []
 
+# Function to load the system prompt from prompt.txt
+def load_prompt():
+    try:
+        with open("bot/prompt.txt", "r", encoding="utf-8") as file:
+            return file.read().strip()
+    except Exception as e:
+        print(f"Error loading prompt.txt: {e}")
+        return "You are a helpful and engaging assistant."
+        
 # Load content from external files
 roasts = load_from_file("bot/roasts.txt", default_list=[
     "You're like a software update: Nobody wants you, but we’re stuck with you.",
@@ -100,6 +109,9 @@ def contribute(message):
                  "Feel free to submit issues, suggest new features, or fork the repo and make pull requests!\n\n"
                  "Every contribution helps make me even better! 🚀")
 
+# Load prompt at startup
+system_prompt = load_prompt()
+
 @bot.message_handler(func=lambda message: message.text and message.text.strip() != "")
 def auto_moderate(message):
     user_id = message.from_user.id
@@ -115,14 +127,14 @@ def auto_moderate(message):
     # Check for spam
     if user_messages[user_id] > 5:
         bot.delete_message(message.chat.id, message.message_id)
-        bot.send_message(message.chat.id, f"Chill {message.from_user.first_name}, spamming isn't cute 😤", reply_to_message_id=message.message_id)
+        bot.reply_to(message, f"Chill {message.from_user.first_name}, spamming isn't cute 😤")
         user_messages[user_id] = 0  # Reset after warning
         return
 
     # Check for bad words
     if any(badword in message.text.lower() for badword in badwords):
         bot.delete_message(message.chat.id, message.message_id)
-        bot.send_message(message.chat.id, f"Uh-oh, watch your language {message.from_user.first_name}!", reply_to_message_id=message.message_id)
+        bot.reply_to(message, f"Uh-oh, watch your language {message.from_user.first_name}!")
         print(f"Deleted message from {message.from_user.username}: {message.text}")
         return
 
@@ -133,12 +145,12 @@ def auto_moderate(message):
             response = client.chat.completions.create(
                 model="deepseek/deepseek-r1:free",
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "system", "content": system_prompt},  # Use loaded prompt
                     {"role": "user", "content": message.text}
                 ]
             )
 
-            # Extract the response text safely
+            # Extract and clean AI response
             ai_reply = response.choices[0].message.content.strip() if response.choices else "Sorry, I have no response."
 
             if not ai_reply:  # Ensure message isn't empty
