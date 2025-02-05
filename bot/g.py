@@ -1,5 +1,4 @@
 import telebot
-import openai
 import os
 import random
 from dotenv import load_dotenv
@@ -12,17 +11,17 @@ import time
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 client = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),  # This is the default and can be omitted
+    base_url="https://openrouter.ai/api/v1",
+    api_key=OPENROUTER_API_KEY,
 )
 
 # Check if values are loaded correctly
-if not BOT_TOKEN or not OPENAI_API_KEY:
-    raise ValueError("Error: BOT_TOKEN or OPENAI_API_KEY is not set or couldn't be loaded from .env file.")
+if not BOT_TOKEN or not OPENROUTER_API_KEY:
+    raise ValueError("Error: BOT_TOKEN or OPENROUTER_API_KEY is not set.")
 
-openai.api_key = OPENAI_API_KEY
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Function to load data from files
@@ -35,15 +34,15 @@ def load_from_file(filename, default_list=None):
         return default_list or []
 
 # Load content from external files
-roasts = load_from_file("roasts.txt", default_list=[
+roasts = load_from_file("bot/roasts.txt", default_list=[
     "You're like a software update: Nobody wants you, but we’re stuck with you.",
     "Your secrets are safe with me. I never even listen when you tell me them.",
 ])
-motivations = load_from_file("motivations.txt", default_list=[
+motivations = load_from_file("bot/motivations.txt", default_list=[
     "Keep shining like the star you are!",
     "Believe in yourself; you’re doing great!"
 ])
-badwords = load_from_file("badwords.txt", default_list=[
+badwords = load_from_file("bot/badwords.txt", default_list=[
     "badword1", "badword2", "badword3"
 ])
 
@@ -132,16 +131,25 @@ def auto_moderate(message):
        (f"@{bot.get_me().username.lower()}" in message.text.lower()):
         try:
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="deepseek/deepseek-r1:free",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": message.text}
                 ]
             )
-            bot.send_message(message.chat.id, response.choices[0].message['content'])
-        except openai.OpenAIError as e:
-            bot.send_message(message.chat.id, f"Oops, there was an error processing your request. Please try again later!")
-            print(f"OpenAI error: {e}")
+
+            # Extract the response text safely
+            ai_reply = response.choices[0].message.content.strip() if response.choices else "Sorry, I have no response."
+
+            if not ai_reply:  # Ensure message isn't empty
+                ai_reply = "Hmm, I don't know what to say."
+
+            bot.send_message(message.chat.id, ai_reply)
+
+        except Exception as e:
+            bot.send_message(message.chat.id, "Oops, there was an error processing your request. Please try again later!")
+            print(f"DeepSeek API error: {e}")
+
             
 # Greet new members
 @bot.message_handler(content_types=['new_chat_members'])
@@ -151,4 +159,4 @@ def greet_new_member(message):
 
 # Run the bot
 print("Sassy Telegram bot is running...")
-bot.polling()
+bot.infinity_polling()  # Ensures auto-reconnection on failure
