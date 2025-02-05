@@ -126,17 +126,24 @@ def auto_moderate(message):
 
     # Check for spam
     if user_messages[user_id] > 5:
-        bot.delete_message(message.chat.id, message.message_id)
-        bot.reply_to(message, f"Chill {message.from_user.first_name}, spamming isn't cute 😤")
+        bot.delete_message(message.chat.id, message.message_id)  # Delete spam message
+        try:
+            bot.send_message(message.chat.id, f"Chill {message.from_user.first_name}, spamming isn't cute 😤")
+        except Exception as e:
+            print(f"Failed to send spam warning: {e}")
+
         user_messages[user_id] = 0  # Reset after warning
         return
 
     # Check for bad words
     if any(badword in message.text.lower() for badword in badwords):
-        bot.delete_message(message.chat.id, message.message_id)
-        bot.reply_to(message, f"Uh-oh, watch your language {message.from_user.first_name}!")
-        print(f"Deleted message from {message.from_user.username}: {message.text}")
+        bot.delete_message(message.chat.id, message.message_id)  # Delete the bad word message
+        try:
+            bot.send_message(message.chat.id, f"Uh-oh, watch your language {message.from_user.first_name}!")
+        except Exception as e:
+            print(f"Failed to send bad word warning: {e}")
         return
+
 
     # Process message only if bot is mentioned or replied to
     if (message.reply_to_message and message.reply_to_message.from_user.id == bot.get_me().id) or \
