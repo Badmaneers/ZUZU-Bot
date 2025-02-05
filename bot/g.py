@@ -115,14 +115,14 @@ def auto_moderate(message):
     # Check for spam
     if user_messages[user_id] > 5:
         bot.delete_message(message.chat.id, message.message_id)
-        bot.send_message(message.chat.id, f"Chill {message.from_user.first_name}, spamming isn't cute 😤")
+        bot.send_message(message.chat.id, f"Chill {message.from_user.first_name}, spamming isn't cute 😤", reply_to_message_id=message.message_id)
         user_messages[user_id] = 0  # Reset after warning
         return
 
     # Check for bad words
     if any(badword in message.text.lower() for badword in badwords):
         bot.delete_message(message.chat.id, message.message_id)
-        bot.send_message(message.chat.id, f"Uh-oh, watch your language {message.from_user.first_name}!")
+        bot.send_message(message.chat.id, f"Uh-oh, watch your language {message.from_user.first_name}!", reply_to_message_id=message.message_id)
         print(f"Deleted message from {message.from_user.username}: {message.text}")
         return
 
@@ -144,11 +144,13 @@ def auto_moderate(message):
             if not ai_reply:  # Ensure message isn't empty
                 ai_reply = "Hmm, I don't know what to say."
 
-            bot.send_message(message.chat.id, ai_reply)
+            # Reply to the user’s message
+            bot.reply_to(message, ai_reply)
 
         except Exception as e:
-            bot.send_message(message.chat.id, "Oops, there was an error processing your request. Please try again later!")
+            bot.reply_to(message, "Oops, there was an error processing your request. Please try again later!")
             print(f"DeepSeek API error: {e}")
+
 
             
 # Greet new members
