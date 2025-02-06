@@ -144,6 +144,86 @@ def contribute(message):
                  "Every contribution helps make me even better! 🚀")
                  
 
+# ========== Admin Features ========== #
+def is_admin(chat_id, user_id):
+    """Check if the user is an admin in the group."""
+    chat_admins = bot.get_chat_administrators(chat_id)
+    return any(admin.user.id == user_id for admin in chat_admins)
+
+@bot.message_handler(commands=['mute'])
+def mute_user(message):
+    """Admin can mute users."""
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    if not is_admin(chat_id, user_id):
+        bot.reply_to(message, "🚫 Only admins can use this command!")
+        return
+
+    if message.reply_to_message:
+        target_id = message.reply_to_message.from_user.id
+        bot.restrict_chat_member(chat_id, target_id, can_send_messages=False)
+        bot.reply_to(message, "🔇 User has been muted!")
+    else:
+        bot.reply_to(message, "Reply to a user to mute them.")
+
+@bot.message_handler(commands=['unmute'])
+def unmute_user(message):
+    """Admin can unmute users."""
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    if not is_admin(chat_id, user_id):
+        bot.reply_to(message, "🚫 Only admins can use this command!")
+        return
+
+    if message.reply_to_message:
+        target_id = message.reply_to_message.from_user.id
+        bot.restrict_chat_member(chat_id, target_id, can_send_messages=True)
+        bot.reply_to(message, "🔊 User has been unmuted!")
+    else:
+        bot.reply_to(message, "Reply to a user to unmute them.")
+
+@bot.message_handler(commands=['ban'])
+def ban_user(message):
+    """Admin can ban users from the group."""
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    if not is_admin(chat_id, user_id):
+        bot.reply_to(message, "🚫 Only admins can use this command!")
+        return
+
+    if message.reply_to_message:
+        target_id = message.reply_to_message.from_user.id
+        bot.kick_chat_member(chat_id, target_id)
+        bot.reply_to(message, "🚨 User has been banned!")
+    else:
+        bot.reply_to(message, "Reply to a user to ban them.")
+
+@bot.message_handler(commands=['warn'])
+def warn_user(message):
+    """Warn users before banning."""
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    if not is_admin(chat_id, user_id):
+        bot.reply_to(message, "🚫 Only admins can use this command!")
+        return
+
+    if message.reply_to_message:
+        target_id = message.reply_to_message.from_user.id
+        user_warnings[target_id] += 1
+
+        if user_warnings[target_id] >= 3:
+            bot.kick_chat_member(chat_id, target_id)
+            bot.reply_to(message, "🚨 User has been banned after 3 warnings!")
+        else:
+            bot.reply_to(message, f"⚠️ Warning {user_warnings[target_id]}/3 - Stop violating the rules!")
+    else:
+        bot.reply_to(message, "Reply to a user to warn them.")
+                 
+
 system_prompt = load_prompt()
 
 # ========== Anti-Spam System ========== #
@@ -212,23 +292,6 @@ def auto_moderate(message):
         except Exception as e:
             bot.send_message(chat_id, "Oops, something went wrong.")
             print(f"AI error: {e}")
-
-
-
-# ========== Admin Features ========== #
-@bot.message_handler(commands=['mute'])
-def mute_user(message):
-    """Admin can mute users"""
-    if message.reply_to_message:
-        bot.restrict_chat_member(message.chat.id, message.reply_to_message.from_user.id, can_send_messages=False)
-        bot.reply_to(message, "User has been muted!")
-
-@bot.message_handler(commands=['unmute'])
-def unmute_user(message):
-    """Admin can unmute users"""
-    if message.reply_to_message:
-        bot.restrict_chat_member(message.chat.id, message.reply_to_message.from_user.id, can_send_messages=True)
-        bot.reply_to(message, "User has been unmuted!")
 
 # ========== Start Bot ========== #
 def handle_exit(signal_number, frame):
