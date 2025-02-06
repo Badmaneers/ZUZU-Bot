@@ -52,7 +52,7 @@ motivations = load_from_file("bot/motivations.txt", default_list=[
     "Believe in yourself; you’re doing great!"
 ])
 badwords = load_from_file("bot/badwords.txt", default_list=[
-    "badword1", "badword2", "badword3"
+    "Nigga", "Ching Chong", "MC"
 ])
 
 # Spam tracking with reset
@@ -112,63 +112,71 @@ def contribute(message):
 # Load prompt at startup
 system_prompt = load_prompt()
 
+# Store chat history for each user
+chat_memory = defaultdict(list)
+
 @bot.message_handler(func=lambda message: message.text and message.text.strip() != "")
 def auto_moderate(message):
     user_id = message.from_user.id
+    chat_id = message.chat.id
 
     # Spam detection with a timeout
     current_time = time.time()
     if current_time - message_timestamps[user_id] > 60:  # Reset counter after 60 seconds
         user_messages[user_id] = 0
-    message_timestamps[user_id] = current_time
+        chat_memory[user_id] = []  # Reset chat memory after inactivity
 
+    message_timestamps[user_id] = current_time
     user_messages[user_id] += 1
 
     # Check for spam
     if user_messages[user_id] > 5:
-        bot.delete_message(message.chat.id, message.message_id)  # Delete spam message
-        try:
-            bot.send_message(message.chat.id, f"Chill {message.from_user.first_name}, spamming isn't cute 😤")
-        except Exception as e:
-            print(f"Failed to send spam warning: {e}")
-
+        bot.delete_message(chat_id, message.message_id)
+        bot.send_message(chat_id, f"Chill {message.from_user.first_name}, spamming isn't cute 😤")
         user_messages[user_id] = 0  # Reset after warning
         return
 
     # Check for bad words
     if any(badword in message.text.lower() for badword in badwords):
-        bot.delete_message(message.chat.id, message.message_id)  # Delete the bad word message
-        try:
-            bot.send_message(message.chat.id, f"Uh-oh, watch your language {message.from_user.first_name}!")
-        except Exception as e:
-            print(f"Failed to send bad word warning: {e}")
+        bot.delete_message(chat_id, message.message_id)
+        bot.send_message(chat_id, f"Uh-oh, watch your language {message.from_user.first_name}!")
         return
 
+    # Add user message to memory
+    chat_memory[user_id].append({"role": "user", "content": message.text})
 
-    # Process message only if bot is mentioned or replied to
+    # Keep only the last 15 messages (to avoid sending too much data)
+    chat_memory[user_id] = chat_memory[user_id][-15:]
+
+    # Process AI response only if bot is mentioned or replied to
     if (message.reply_to_message and message.reply_to_message.from_user.id == bot.get_me().id) or \
        (f"@{bot.get_me().username.lower()}" in message.text.lower()):
         try:
+            # Create conversation history
+            conversation = [{"role": "system", "content": system_prompt}] + chat_memory[user_id]
+
+            # Get AI response using the correct DeepSeek model
             response = client.chat.completions.create(
-                model="deepseek/deepseek-r1:free",
-                messages=[
-                    {"role": "system", "content": system_prompt},  # Use loaded prompt
-                    {"role": "user", "content": message.text}
-                ]
+                model="meta-llama/llama-3.1-405b-instruct:free",
+                messages=conversation
             )
 
-            # Extract and clean AI response
+            # Extract AI response
             ai_reply = response.choices[0].message.content.strip() if response.choices else "Sorry, I have no response."
 
-            if not ai_reply:  # Ensure message isn't empty
+            if not ai_reply:
                 ai_reply = "Hmm, I don't know what to say."
 
-            # Reply to the user’s message
+            # Save AI response in memory
+            chat_memory[user_id].append({"role": "assistant", "content": ai_reply})
+
+            # Reply to user
             bot.reply_to(message, ai_reply)
 
         except Exception as e:
-            bot.reply_to(message, "Oops, there was an error processing your request. Please try again later!")
+            bot.send_message(chat_id, "Oops, there was an error processing your request. Please try again later!")
             print(f"DeepSeek API error: {e}")
+
 
 
             
