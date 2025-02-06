@@ -1,11 +1,16 @@
 import telebot
 import os
 import random
+import json
+import zlib
+import base64
 from dotenv import load_dotenv
 import re
-from openai import OpenAI
-from collections import defaultdict
 import time
+from collections import defaultdict
+import signal
+import sys
+from openai import OpenAI
 
 # Load environment variables from .env file
 load_dotenv()
@@ -13,47 +18,74 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
+# ✅ Move this up to define `bot` early
+bot = telebot.TeleBot(BOT_TOKEN)
+
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
 )
 
-# Check if values are loaded correctly
+# Ensure API keys are loaded correctly
 if not BOT_TOKEN or not OPENROUTER_API_KEY:
     raise ValueError("Error: BOT_TOKEN or OPENROUTER_API_KEY is not set.")
 
-bot = telebot.TeleBot(BOT_TOKEN)
+# ========== Memory Storage ========== #
+MEMORY_FILE = "chat_memory.json"
 
-# Function to load data from files
-def load_from_file(filename, default_list=None):
+def compress_data(data):
+    """Compress JSON data using zlib & base64"""
+    return base64.b64encode(zlib.compress(json.dumps(data).encode())).decode()
+
+def decompress_data(data):
+    """Decompress JSON data"""
+    return json.loads(zlib.decompress(base64.b64decode(data)).decode())
+
+def load_memory():
+    """Load chat memory from a compressed file"""
+    if os.path.exists(MEMORY_FILE):
+        try:
+            with open(MEMORY_FILE, "r", encoding="utf-8") as file:
+                raw_data = file.read().strip()
+                if raw_data:
+                    return decompress_data(raw_data)
+        except Exception as e:
+            print(f"Error loading memory: {e}")
+    return {}
+
+def save_memory():
+    """Save chat memory to a compressed file"""
     try:
-        with open(filename, "r") as file:
+        with open(MEMORY_FILE, "w", encoding="utf-8") as file:
+            file.write(compress_data(chat_memory))
+    except Exception as e:
+        print(f"Error saving memory: {e}")
+
+chat_memory = load_memory()
+
+# ========== Utility Functions ========== #
+def load_from_file(filename, default_list=None):
+    """Load data from a file or use default values"""
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
             return [line.strip() for line in file.readlines()]
     except Exception as e:
         print(f"Error loading {filename}: {e}")
         return default_list or []
 
-# Function to load the system prompt from prompt.txt
 def load_prompt():
+    """Load bot's personality prompt"""
     try:
         with open("bot/prompt.txt", "r", encoding="utf-8") as file:
             return file.read().strip()
     except Exception as e:
         print(f"Error loading prompt.txt: {e}")
-        return "You are a helpful and engaging assistant."
-        
-# Load content from external files
-roasts = load_from_file("bot/roasts.txt", default_list=[
-    "You're like a software update: Nobody wants you, but we’re stuck with you.",
-    "Your secrets are safe with me. I never even listen when you tell me them.",
-])
-motivations = load_from_file("bot/motivations.txt", default_list=[
-    "Keep shining like the star you are!",
-    "Believe in yourself; you’re doing great!"
-])
-badwords = load_from_file("bot/badwords.txt", default_list=[
-    "Nigga", "Ching Chong", "MC"
-])
+        return "You are a sassy and engaging assistant."
+
+# Load data files
+roasts = load_from_file("bot/roasts.txt", ["You're like a software update: Nobody wants you, but we’re stuck with you."])
+motivations = load_from_file("bot/motivations.txt", ["Keep shining like the star you are!"])
+badwords = load_from_file("bot/badwords.txt", ["examplebadword1", "examplebadword2"])
 
 # Spam tracking with reset
 user_messages = defaultdict(int)
@@ -72,7 +104,9 @@ def help_message(message):
                           "/motivate - Get a pep talk! 💪\n"
                           "/tea - Spill some gossip 😉\n"
                           "/rules - See the group rules 📜\n"
-                          "/contribute - Help make me better! 🛠️")
+                          "/contribute - Help make me better! 🛠️\n"
+                          "/mute to mute a user 🤐\n"
+                          "/unmute to unmute a user 👄")
 
 # Roast command
 @bot.message_handler(commands=['roast'])
@@ -108,84 +142,102 @@ def contribute(message):
                  "Check out my GitHub repository: [https://github.com/Badmaneers/Mod-Queen-Bot]\n"
                  "Feel free to submit issues, suggest new features, or fork the repo and make pull requests!\n\n"
                  "Every contribution helps make me even better! 🚀")
+                 
 
-# Load prompt at startup
 system_prompt = load_prompt()
 
-# Store chat history for each user
-chat_memory = defaultdict(list)
+# ========== Anti-Spam System ========== #
+user_messages = defaultdict(int)
+message_timestamps = defaultdict(float)
+user_warnings = defaultdict(int)
 
+def warn_user(user_id, chat_id):
+    """Warn user and kick if repeated violations"""
+    user_warnings[user_id] += 1
+    if user_warnings[user_id] >= 3:
+        bot.kick_chat_member(chat_id, user_id)
+        bot.send_message(chat_id, "User has been kicked for repeated violations.")
+    else:
+        bot.send_message(chat_id, f"⚠️ Warning {user_warnings[user_id]}/3 - Stop spamming!")
+
+# ========== Moderation & AI Response ========== #
 @bot.message_handler(func=lambda message: message.text and message.text.strip() != "")
 def auto_moderate(message):
-    user_id = message.from_user.id
+    user_id = str(message.from_user.id)  # Convert to string for JSON keys
     chat_id = message.chat.id
 
-    # Spam detection with a timeout
+    # Anti-spam detection
     current_time = time.time()
-    if current_time - message_timestamps[user_id] > 60:  # Reset counter after 60 seconds
-        user_messages[user_id] = 0
-        chat_memory[user_id] = []  # Reset chat memory after inactivity
+    if current_time - message_timestamps[user_id] < 5:  # Messages too fast = spam
+        warn_user(user_id, chat_id)
+        bot.delete_message(chat_id, message.message_id)
+        return
 
     message_timestamps[user_id] = current_time
     user_messages[user_id] += 1
 
-    # Check for spam
-    if user_messages[user_id] > 5:
-        bot.delete_message(chat_id, message.message_id)
-        bot.send_message(chat_id, f"Chill {message.from_user.first_name}, spamming isn't cute 😤")
-        user_messages[user_id] = 0  # Reset after warning
-        return
-
-    # Check for bad words
+    # Bad word filtering
     if any(badword in message.text.lower() for badword in badwords):
         bot.delete_message(chat_id, message.message_id)
         bot.send_message(chat_id, f"Uh-oh, watch your language {message.from_user.first_name}!")
         return
 
-    # Add user message to memory
+    # Store chat history
+    if user_id not in chat_memory:
+        chat_memory[user_id] = []
+
     chat_memory[user_id].append({"role": "user", "content": message.text})
+    chat_memory[user_id] = chat_memory[user_id][-10:]  # Keep last 10 messages
 
-    # Keep only the last 15 messages (to avoid sending too much data)
-    chat_memory[user_id] = chat_memory[user_id][-15:]
-
-    # Process AI response only if bot is mentioned or replied to
-    if (message.reply_to_message and message.reply_to_message.from_user.id == bot.get_me().id) or \
-       (f"@{bot.get_me().username.lower()}" in message.text.lower()):
+    # If bot is mentioned, generate response
+    if f"@{bot.get_me().username.lower()}" in message.text.lower() or \
+       (message.reply_to_message and message.reply_to_message.from_user.id == bot.get_me().id):
         try:
-            # Create conversation history
             conversation = [{"role": "system", "content": system_prompt}] + chat_memory[user_id]
 
-            # Get AI response using the correct DeepSeek model
+            # ✅ FIX: Correctly extract AI response
             response = client.chat.completions.create(
                 model="meta-llama/llama-3.1-405b-instruct:free",
                 messages=conversation
             )
 
-            # Extract AI response
-            ai_reply = response.choices[0].message.content.strip() if response.choices else "Sorry, I have no response."
+            ai_reply = response.choices[0].message.content.strip() if response.choices else "Oops, I have no response. 😭"
 
-            if not ai_reply:
-                ai_reply = "Hmm, I don't know what to say."
 
-            # Save AI response in memory
             chat_memory[user_id].append({"role": "assistant", "content": ai_reply})
+            save_memory()  # Save after AI response
 
-            # Reply to user
             bot.reply_to(message, ai_reply)
 
         except Exception as e:
-            bot.send_message(chat_id, "Oops, there was an error processing your request. Please try again later!")
-            print(f"DeepSeek API error: {e}")
+            bot.send_message(chat_id, "Oops, something went wrong.")
+            print(f"AI error: {e}")
 
 
 
-            
-# Greet new members
-@bot.message_handler(content_types=['new_chat_members'])
-def greet_new_member(message):
-    for member in message.new_chat_members:
-        bot.reply_to(message, f"OMG {member.first_name}, welcome! Hope you can keep up with our vibes! ✨")
+# ========== Admin Features ========== #
+@bot.message_handler(commands=['mute'])
+def mute_user(message):
+    """Admin can mute users"""
+    if message.reply_to_message:
+        bot.restrict_chat_member(message.chat.id, message.reply_to_message.from_user.id, can_send_messages=False)
+        bot.reply_to(message, "User has been muted!")
 
-# Run the bot
+@bot.message_handler(commands=['unmute'])
+def unmute_user(message):
+    """Admin can unmute users"""
+    if message.reply_to_message:
+        bot.restrict_chat_member(message.chat.id, message.reply_to_message.from_user.id, can_send_messages=True)
+        bot.reply_to(message, "User has been unmuted!")
+
+# ========== Start Bot ========== #
+def handle_exit(signal_number, frame):
+    print("Saving memory before exit...")
+    save_memory()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handle_exit)
+signal.signal(signal.SIGTERM, handle_exit)
+
 print("Sassy Telegram bot is running...")
-bot.infinity_polling()  # Ensures auto-reconnection on failure
+bot.infinity_polling()
