@@ -13,6 +13,7 @@ import sys
 from openai import OpenAI
 import random
 from datetime import datetime, timedelta
+import threading
 
 # Load environment variables
 load_dotenv()
@@ -74,6 +75,98 @@ def contribute(message):
                  "Feel free to submit issues, suggest new features, or fork the repo and make pull requests!\n\n"
                  "Every contribution helps make me even better! 🚀")
 
+# Muting and Unmuting stuff
+@bot.message_handler(commands=['mute'])
+def mute_user(message):
+    """Admin can mute users for a specified time (default: 10 minutes)."""
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    # Check if chat is a supergroup
+    chat = bot.get_chat(chat_id)
+    if chat.type != "supergroup":
+        bot.reply_to(message, "🚫 This command only works in supergroups!")
+        return
+
+    if not is_admin(chat_id, user_id):
+        bot.reply_to(message, "🚫 Only admins can use this command!")
+        return
+
+    # ✅ Fix: Check if the message has a reply properly
+    if not message.reply_to_message or not message.reply_to_message.from_user:
+        bot.reply_to(message, "⚠️ Reply to a valid user to mute them!")
+        return
+
+    target_id = message.reply_to_message.from_user.id
+
+    if is_admin(chat_id, target_id):
+        bot.reply_to(message, "🚫 You cannot mute an admin!")
+        return
+
+    mute_duration = 600  # Default: 10 minutes
+
+    # ✅ Fix: Check if a duration was provided
+    try:
+        command_parts = message.text.split()
+        if len(command_parts) > 1:
+            mute_duration = int(command_parts[1]) * 60
+    except ValueError:
+        bot.reply_to(message, "⚠️ Invalid time format! Use `/mute [minutes]`")
+
+    muted_until = datetime.now() + timedelta(seconds=mute_duration)
+    muted_users[target_id] = muted_until  # Store mute expiry time
+
+    bot.restrict_chat_member(chat_id, target_id, until_date=muted_until.timestamp(), can_send_messages=False)
+    bot.reply_to(message, f"🔇 User {bot.get_chat_member(chat_id, target_id).user.first_name} has been muted for {mute_duration // 60} minutes!")
+
+# Unmute stuff here
+@bot.message_handler(commands=['unmute'])
+def unmute_user(message):
+    """Admin can manually unmute users before their time expires."""
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    if not is_admin(chat_id, user_id):
+        bot.reply_to(message, "🚫 Only admins can use this command!")
+        return
+
+    if message.reply_to_message:
+        target_id = message.reply_to_message.from_user.id
+
+        if target_id in muted_users:
+            del muted_users[target_id]  # Remove from mute list
+
+        bot.restrict_chat_member(chat_id, target_id, can_send_messages=True)
+        bot.reply_to(message, f"🔊 User {bot.get_chat_member(chat_id, target_id).user.first_name} has been unmuted!")
+    else:
+        bot.reply_to(message, "Reply to a user to unmute them!")
+  
+# Unmute automatically after a set amount of time 
+def check_unmute():
+    """Check if muted users should be unmuted."""
+    while True:
+        now = datetime.now()
+        to_unmute = [user_id for user_id, unmute_time in muted_users.items() if now >= unmute_time]
+
+        for user_id in to_unmute:
+            for chat_id in list(muted_users.keys()):  # ✅ FIX: Don't use `bot.get_updates()`
+                try:
+                    chat = bot.get_chat(chat_id)
+                    if chat.type != "supergroup":
+                        print(f"Skipping unmute for {user_id} in non-supergroup {chat_id}")
+                        continue  # ✅ Skip unmuting users in non-supergroups
+
+                    bot.restrict_chat_member(chat_id, user_id, can_send_messages=True)
+                    bot.send_message(chat_id, f"🔊 User {bot.get_chat_member(chat_id, user_id).user.first_name} has been auto-unmuted!")
+                    del muted_users[user_id]  # Remove user from mute list
+                except Exception as e:
+                    print(f"Error unmuting user {user_id} in chat {chat_id}: {e}")
+
+        time.sleep(60)  # Check every 60 seconds
+
+# ✅ Start auto-unmute thread
+threading.Thread(target=check_unmute, daemon=True).start()
+
 # Spill the tea
 @bot.message_handler(commands=['tea'])
 def spill_tea(message):
@@ -93,7 +186,7 @@ def help_message(message):
                           "/tea - Spill some gossip 😉\n"
                           "/rules - See the group rules 📜\n"
                           "/contribute - Help make me better! 🛠️\n"
-                          "/warn - To warn users! 👹"
+                          "/warn - To warn users! 👹")
                           
 # ========== Utility Functions ========== #
 def load_from_file(filename, default_list=None):
@@ -157,7 +250,7 @@ def motivate_user(message):
     bot.reply_to(target, f"{target.from_user.first_name}, {random.choice(motivations)}")
 
 # ========== AI Chat System with Retries & Async Handling ========== #
-import threading
+
 
 system_prompt = load_prompt()
 
