@@ -11,6 +11,8 @@ from collections import defaultdict
 import signal
 import sys
 from openai import OpenAI
+import random
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -18,6 +20,7 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
+muted_users = {}  # Store muted users with their unmute time
 bot = telebot.TeleBot(BOT_TOKEN)
 
 client = OpenAI(
@@ -90,8 +93,7 @@ def help_message(message):
                           "/tea - Spill some gossip 😉\n"
                           "/rules - See the group rules 📜\n"
                           "/contribute - Help make me better! 🛠️\n"
-                          "/mute to mute a user 🤐\n"
-                          "/unmute to unmute a user 👄")
+                          "/warn - To warn users! 👹"
                           
 # ========== Utility Functions ========== #
 def load_from_file(filename, default_list=None):
@@ -119,13 +121,29 @@ user_messages = defaultdict(int)
 message_timestamps = defaultdict(float)
 user_warnings = defaultdict(int)
 
+def is_admin(chat_id, user_id):
+    """Check if the user is an admin in the group."""
+    chat_admins = bot.get_chat_administrators(chat_id)
+    return any(admin.user.id == user_id for admin in chat_admins)
+
 def warn_user(user_id, chat_id):
+    """Warn users and mute them for a random time instead of kicking."""
+    if is_admin(chat_id, user_id):
+        bot.send_message(chat_id, f"⚠️ {bot.get_chat_member(chat_id, user_id).user.first_name} is an admin, so no muting. 😏")
+        return  
+
     user_warnings[user_id] += 1
     if user_warnings[user_id] >= 3:
-        bot.kick_chat_member(chat_id, user_id)
-        bot.send_message(chat_id, "User has been kicked for repeated violations.")
+        mute_duration = random.randint(60, 86400)  # Random mute time (1 min - 1 day)
+        muted_until = datetime.now() + timedelta(seconds=mute_duration)
+        muted_users[user_id] = muted_until  # Store mute expiry time
+
+        bot.restrict_chat_member(chat_id, user_id, until_date=muted_until.timestamp(), can_send_messages=False)
+        bot.send_message(chat_id, f"🤐 User {bot.get_chat_member(chat_id, user_id).user.first_name} has been muted for {mute_duration // 60} minutes due to spam.")
     else:
         bot.send_message(chat_id, f"⚠️ Warning {user_warnings[user_id]}/3 - Stop spamming!")
+
+
 
 # ========== Fix /roast and /motivate to Tag Users ========== #
 @bot.message_handler(commands=['roast'])
