@@ -1,12 +1,9 @@
 import telebot
 import os
+import time
 from openai import OpenAI
-import os
 from helper import load_from_file 
 import memory
-import time
-import sys
-import signal
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -19,9 +16,8 @@ client = OpenAI(
 
 if not BOT_TOKEN or not OPENROUTER_API_KEY:
     raise ValueError("Error: BOT_TOKEN or OPENROUTER_API_KEY is not set.")
-    
-# ========== AI Chat System with Retries & Async Handling ========== #
 
+# ========== Load System Prompt ==========
 def load_prompt():
     try:
         with open("bot/prompt.txt", "r", encoding="utf-8") as file:
@@ -29,43 +25,50 @@ def load_prompt():
     except Exception as e:
         print(f"Error loading prompt.txt: {e}")
         return "You are a sassy and engaging assistant."
-        
+
 system_prompt = load_prompt()
 
+# ========== AI Chat System with Faster Processing ==========
 def process_ai_response(message, user_id, chat_id):
-    """Handle AI responses with retries for failures."""
+    """Handles AI responses efficiently and fixes lag issues."""
     try:
-        conversation = [{"role": "system", "content": system_prompt}] + memory.chat_memory.get(user_id, [])
-        
-        for _ in range(2):  # Retry up to 2 times
+        # ✅ Step 1: Append user message to chat history FIRST
+        if user_id not in memory.chat_memory:
+            memory.chat_memory[user_id] = []
+        memory.chat_memory[user_id].append({"role": "user", "content": message.text})
+
+        conversation = [{"role": "system", "content": system_prompt}] + memory.chat_memory[user_id]
+
+        for attempt in range(2):  # Retry up to 2 times
             try:
                 response = client.chat.completions.create(
                     model="meta-llama/llama-3.1-405b-instruct:free",
                     messages=conversation
                 )
+
                 if response.choices:
                     ai_reply = response.choices[0].message.content.strip()
+
+                    # ✅ Step 2: Append AI response IMMEDIATELY to chat history
                     memory.chat_memory[user_id].append({"role": "assistant", "content": ai_reply})
+                    memory.chat_memory[user_id] = memory.chat_memory[user_id][-5:]  # Keep last 5 messages
                     memory.save_memory()
+
                     bot.send_message(chat_id, ai_reply, reply_to_message_id=message.message_id)
-                    return
+                    return  # Exit after successful response
+                
             except Exception as e:
-                print(f"AI backend error: {e}, retrying...")
-                time.sleep(2)  # Wait before retrying
+                print(f"AI backend error: {e}, retrying... ({attempt + 1})")
+                time.sleep(2)  # Short delay before retrying
+
+        # If all retries fail, send an error message
         bot.send_message(chat_id, "Oops, my brain lagged out. Try again later! 😭")
-    
+
     except Exception as e:
         bot.send_message(chat_id, "Oops, something went wrong.")
         print(f"AI error: {e}")
-        
-                          
-# ========== Start Bot ========== #
-def handle_exit(signal_number, frame):
-    print("Saving memory before exit...")
-    memory.save_memory()
-    sys.exit(0)
 
-signal.signal(signal.SIGINT, handle_exit)
-signal.signal(signal.SIGTERM, handle_exit)
+        
+                       
 
 print("Sassy Telegram bot is running...")

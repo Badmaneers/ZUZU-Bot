@@ -48,7 +48,8 @@ def help_message(message):
                           "/warn - To warn users! 👹\n"
                           "/ban - To remove someone from group! 💥\n"
                           "/mute - To shut someone's mouth! 🤐 \n"
-                          "/unmute - To open someone's mouth again \n")
+                          "/unmute - To open someone's mouth again \n"
+                          "/8ball - To talk to here fortune teller side 🥠")
 
 # TODO will eventually move some functions to diff files to not clutter the main file
 

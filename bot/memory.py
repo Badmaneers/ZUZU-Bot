@@ -2,6 +2,9 @@ import os
 import json
 import zlib
 import base64
+import signal
+import sys
+import threading
 
 # ========== Memory Storage ========== #
 MEMORY_FILE = "chat_memory.json"
@@ -29,5 +32,25 @@ def save_memory():
             file.write(compress_data(chat_memory))
     except Exception as e:
         print(f"Error saving memory: {e}")
+
+# ========== Auto-Save Memory Every 25 Seconds ========== #
+def auto_save_memory():
+    while True:
+        save_memory()
+        print("Auto-saved memory.")
+        time.sleep(25)  # Wait 25 seconds before saving again
+
+# Start auto-save thread
+auto_save_thread = threading.Thread(target=auto_save_memory, daemon=True)
+auto_save_thread.start()
+
+# ========== Start Bot ========== #
+def handle_exit(signal_number, frame):
+    print("Saving memory before exit...")
+    save_memory()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handle_exit)
+signal.signal(signal.SIGTERM, handle_exit)
 
 chat_memory = load_memory()
