@@ -103,7 +103,7 @@ def mute_user(message):
         bot.reply_to(message, "🚫 You cannot mute an admin!")
         return
 
-    mute_duration = 600  # Default: 10 minutes
+    mute_duration = 300  # Default: 10 minutes
 
     # ✅ Fix: Check if a duration was provided
     try:
@@ -167,6 +167,28 @@ def check_unmute():
 # ✅ Start auto-unmute thread
 threading.Thread(target=check_unmute, daemon=True).start()
 
+# Baning stuff
+
+@bot.message_handler(commands=['ban'])
+def ban_user(message):
+    """Admin can ban users from the group."""
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    target_id = message.reply_to_message.from_user.id
+
+    if not is_admin(chat_id, user_id):
+        bot.reply_to(message, "🚫 Only admins can use this command!")
+        return
+    if is_admin(chat_id, target_id):
+        bot.reply_to(message, "🚫 You cannot ban an admin!")
+        return
+
+    if message.reply_to_message:
+        bot.kick_chat_member(chat_id, target_id)
+        bot.reply_to(message, "🚨 User has been banned!")
+    else:
+        bot.reply_to(message, "Reply to a user to ban them.")
+
 # Spill the tea
 @bot.message_handler(commands=['tea'])
 def spill_tea(message):
@@ -186,7 +208,10 @@ def help_message(message):
                           "/tea - Spill some gossip 😉\n"
                           "/rules - See the group rules 📜\n"
                           "/contribute - Help make me better! 🛠️\n"
-                          "/warn - To warn users! 👹")
+                          "/warn - To warn users! 👹\n"
+                          "/ban - To remove someone from group! 💥\n"
+                          "/mute - To shut someone's mouth! 🤐 \n"
+                          "/unmute - To open someone's mouth again \n")
                           
 # ========== Utility Functions ========== #
 def load_from_file(filename, default_list=None):
