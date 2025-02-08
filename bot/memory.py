@@ -5,6 +5,7 @@ import base64
 import signal
 import sys
 import threading
+import time
 
 # ========== Memory Storage ========== #
 MEMORY_FILE = "chat_memory.json"
@@ -26,6 +27,8 @@ def load_memory():
             print(f"Error loading memory: {e}")
     return {}
 
+chat_memory = load_memory()
+
 def save_memory():
     try:
         with open(MEMORY_FILE, "w", encoding="utf-8") as file:
@@ -38,7 +41,7 @@ def auto_save_memory():
     while True:
         save_memory()
         print("Auto-saved memory.")
-        time.sleep(25)  # Wait 25 seconds before saving again
+        time.sleep(60)  # Wait 60 seconds before saving again
 
 # Start auto-save thread
 auto_save_thread = threading.Thread(target=auto_save_memory, daemon=True)
@@ -52,5 +55,3 @@ def handle_exit(signal_number, frame):
 
 signal.signal(signal.SIGINT, handle_exit)
 signal.signal(signal.SIGTERM, handle_exit)
-
-chat_memory = load_memory()

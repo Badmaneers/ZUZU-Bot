@@ -24,36 +24,41 @@ def load_prompt():
             return file.read().strip()
     except Exception as e:
         print(f"Error loading prompt.txt: {e}")
-        return "You are a sassy and engaging assistant."
+        return "You are a sassy and engaging assistant. Respond like a human, keep context, and use natural conversational flow."
 
 system_prompt = load_prompt()
 
-# ========== AI Chat System with Faster Processing ==========
+# ========== AI Chat System with Enhanced Memory & Natural Response ==========
 def process_ai_response(message, user_id, chat_id):
-    """Handles AI responses efficiently and fixes lag issues."""
+    """Handles AI responses efficiently, maintaining natural conversation and strong memory."""
     try:
-        # ✅ Step 1: Append user message to chat history FIRST
-        if user_id not in memory.chat_memory:
-            memory.chat_memory[user_id] = []
-        memory.chat_memory[user_id].append({"role": "user", "content": message.text})
-
-        conversation = [{"role": "system", "content": system_prompt}] + memory.chat_memory[user_id]
+        # ✅ Step 1: Load user-specific memory
+        user_memory = memory.chat_memory.get(user_id, [])
+        
+        # ✅ Step 2: Append the user's latest message to their memory
+        user_memory.append({"role": "user", "content": message.text})
+        
+        # ✅ Step 3: Prepare conversation using system prompt and user memory
+        conversation = [{"role": "system", "content": system_prompt}] + user_memory[-15:]  # Keep last 15 messages
 
         for attempt in range(2):  # Retry up to 2 times
             try:
                 response = client.chat.completions.create(
                     model="meta-llama/llama-3.1-405b-instruct:free",
-                    messages=conversation
+                    messages=conversation,
+                    temperature=0.7,  # Adjusts creativity for a natural response
+                    max_tokens=200,   # Limits response length to stay concise
+                    top_p=0.9         # Makes responses more varied
                 )
 
                 if response.choices:
                     ai_reply = response.choices[0].message.content.strip()
-
-                    # ✅ Step 2: Append AI response IMMEDIATELY to chat history
-                    memory.chat_memory[user_id].append({"role": "assistant", "content": ai_reply})
-                    memory.chat_memory[user_id] = memory.chat_memory[user_id][-5:]  # Keep last 5 messages
+                    
+                    # ✅ Step 4: Append AI response to user memory
+                    user_memory.append({"role": "assistant", "content": ai_reply})
+                    memory.chat_memory[user_id] = user_memory[-15:]  # Keep last 15 messages
                     memory.save_memory()
-
+                    
                     bot.send_message(chat_id, ai_reply, reply_to_message_id=message.message_id)
                     return  # Exit after successful response
                 
@@ -67,8 +72,6 @@ def process_ai_response(message, user_id, chat_id):
     except Exception as e:
         bot.send_message(chat_id, "Oops, something went wrong.")
         print(f"AI error: {e}")
-
         
-                       
-
+                      
 print("Sassy Telegram bot is running...")
