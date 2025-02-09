@@ -3,7 +3,7 @@ import os
 from openai import OpenAI
 import random
 import threading
-from magic8ball import magic_8ball
+from fortune import fortune
 from moderations import greet_new_member , mute_unmute , auto_moderate
 from fun import register_fun_handlers
 
@@ -47,13 +47,13 @@ def help_message(message):
                           "/contribute - Help make me better! 🛠️\n"
                           "/warn - To warn users! 👹\n"
                           "/ban - To remove someone from group! 💥\n"
-                          "/mute - To shut someone's mouth! 🤐 \n"
-                          "/unmute - To open someone's mouth again \n"
-                          "/8ball - To talk to here fortune teller side 🥠")
+                          "/mute - To shut someone's mouth! 🤐\n"
+                          "/unmute - To open someone's mouth again! 👄\n"
+                          "/fortune - To talk to here fortune teller side! 🥠")
 
 # TODO will eventually move some functions to diff files to not clutter the main file
 
-bot.message_handler(commands=['8ball'])(magic_8ball)
+bot.message_handler(commands=['fortune'])(fortune)
 register_fun_handlers(bot)
 bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
 bot.message_handler(commands=['mute' , 'unmute' , 'warn' , 'ban'])(mute_unmute)

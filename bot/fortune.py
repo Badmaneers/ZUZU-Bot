@@ -34,17 +34,17 @@ def load_from_file(filename, default_list=None):
         print(f"Error loading {filename}: {e}")
         return default_list or []
 
-# Magic 8ball using AI
-@bot.message_handler(commands=['8ball'])
-def magic_8ball(message):
-    question = message.text.replace("/8ball", "").strip()
+# Magic fortune using AI
+@bot.message_handler(commands=['fortune'])
+def fortune(message):
+    question = message.text.replace("/fortune", "").strip()
     if not question:
         bot.reply_to(message, "Ask me a question, babe! 😏")
         return
     
     response = client.chat.completions.create(
         model="meta-llama/llama-3.1-405b-instruct:free",
-        messages=[{"role": "system", "content": "You are a sarcastic magic 8-ball"},
+        messages=[{"role": "system", "content": "You are a fortune teller"},
                   {"role": "user", "content": question}]
     )
     answer = response.choices[0].message.content.strip()
