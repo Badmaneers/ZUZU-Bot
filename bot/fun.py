@@ -18,3 +18,4 @@ def register_fun_handlers(bot):
 
         elif message.text.startswith("/motivate"):
             bot.reply_to(target, f"{target.from_user.first_name}, {random.choice(motivations)}")
+            

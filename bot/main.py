@@ -8,6 +8,7 @@ from moderations import greet_new_member , mute_unmute , auto_moderate
 from fun import register_fun_handlers
 from owner import register_owner_commands, fetch_groups
 import logging
+import fun
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OWNER_ID = int(os.getenv("OWNER_ID"))
