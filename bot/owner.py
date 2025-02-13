@@ -28,43 +28,52 @@ GROUPS_FILE = "bot/groups.txt"
 if not os.path.exists(GROUPS_FILE):
     open(GROUPS_FILE, "w").close()
 
-# ✅ Fetch All Group IDs on Bot Start
-def fetch_groups():
-    """Fetch all group and supergroup IDs where the bot is present and save them to groups.txt without replacing old values."""
+# ✅ Save Group ID When Bot Joins a Group
+@bot.message_handler(content_types=['new_chat_members'])
+def save_group_id(message):
+    """Saves group ID when the bot is added to a new group."""
+    chat_id = str(message.chat.id)
+    
+    # ✅ Read existing group IDs
+    with open(GROUPS_FILE, "r") as file:
+        existing_groups = {line.strip() for line in file.readlines()}
+    
+    # ✅ Add new group ID if not already in the file
+    if chat_id not in existing_groups:
+        with open(GROUPS_FILE, "a") as file:
+            file.write(f"{chat_id}\n")
+        logging.info(f"Added new group ID: {chat_id}")
+    else:
+        logging.info(f"Group ID {chat_id} already exists. No action taken.")
+
+# ✅ Fetch and Save IDs from Existing Joined Groups
+def fetch_existing_groups():
+    """Fetches groups the bot is already a member of and saves their IDs."""
     try:
-        updates = bot.get_updates(timeout=10)
+        updates = bot.get_updates(timeout=9999*2)
         existing_group_ids = set()
-        
-        # ✅ Load existing groups to avoid duplicates
+
         if os.path.exists(GROUPS_FILE):
             with open(GROUPS_FILE, "r") as file:
                 existing_group_ids.update(line.strip() for line in file.readlines())
 
         new_group_ids = set()
-        
+
         for update in updates:
-            chat = None
             if hasattr(update, "message") and update.message:
                 chat = update.message.chat
-            elif hasattr(update, "edited_message") and update.edited_message:
-                chat = update.edited_message.chat
-            elif hasattr(update, "channel_post") and update.channel_post:
-                chat = update.channel_post.chat
-            elif hasattr(update, "callback_query") and update.callback_query:
-                chat = update.callback_query.message.chat
-
-            if chat and chat.type in ["group", "supergroup", "channel"]:
-                new_group_ids.add(str(chat.id))
-
+                if chat and chat.type in ["group", "supergroup", "channel"]:
+                    new_group_ids.add(str(chat.id))
+        
         all_group_ids = existing_group_ids.union(new_group_ids)
 
         with open(GROUPS_FILE, "w") as file:
             for group_id in all_group_ids:
                 file.write(f"{group_id}\n")
         
-        logging.info(f"Fetched and saved {len(new_group_ids)} new group IDs. Total groups stored: {len(all_group_ids)}")
+        logging.info(f"Fetched and saved {len(new_group_ids)} existing group IDs. Total groups stored: {len(all_group_ids)}")
     except Exception as e:
-        logging.error(f"Error fetching group IDs: {e}")
+        logging.error(f"Error fetching existing group IDs: {e}")
 
 
 
@@ -159,5 +168,5 @@ def register_owner_commands(bot):
             bot.reply_to(message, f"❌ Error reading logs: {e}")
 
 # ✅ Fetch groups when the bot starts
-fetch_groups()
+fetch_existing_groups()
 start_ai_quote_scheduler()

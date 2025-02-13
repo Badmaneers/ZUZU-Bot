@@ -6,7 +6,7 @@ import threading
 from fortune import fortune
 from moderations import greet_new_member , mute_unmute , auto_moderate
 from fun import register_fun_handlers
-from owner import register_owner_commands, fetch_groups
+from owner import register_owner_commands, fetch_existing_groups
 import logging
 import fun
 
@@ -78,7 +78,7 @@ def help_message(message):
 
 bot.message_handler(commands=['fortune'])(fortune)
 register_fun_handlers(bot)
-fetch_groups()
+fetch_existing_groups()
 register_owner_commands(bot)
 bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
 bot.message_handler(commands=['mute' , 'unmute' , 'warn' , 'ban'])(mute_unmute)
