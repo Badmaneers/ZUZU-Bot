@@ -6,7 +6,7 @@ import threading
 from fortune import fortune
 from moderations import greet_new_member , mute_unmute , auto_moderate
 from fun import register_fun_handlers
-from owner import register_owner_commands
+from owner import register_owner_commands, fetch_groups
 import logging
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -75,10 +75,9 @@ def help_message(message):
               "/fortune - To talk to here fortune teller side! 🥠")
   bot.reply_to(message, help_text, parse_mode="Markdown")
 
-# TODO will eventually move some functions to diff files to not clutter the main file
-
 bot.message_handler(commands=['fortune'])(fortune)
 register_fun_handlers(bot)
+fetch_groups()
 register_owner_commands(bot)
 bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
 bot.message_handler(commands=['mute' , 'unmute' , 'warn' , 'ban'])(mute_unmute)
