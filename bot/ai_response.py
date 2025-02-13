@@ -28,23 +28,23 @@ def load_prompt():
 
 system_prompt = load_prompt()
 
-# ========== AI Chat System with Enhanced Memory & Natural Response ==========
+# ========== AI Chat System with Enhanced Memory & User Awareness ==========
 def process_ai_response(message, user_id, chat_id):
-    """Handles AI responses efficiently, maintaining natural conversation and strong memory."""
+    """Handles AI responses efficiently, maintaining natural conversation and remembering user names."""
     try:
-        # ✅ Step 1: Load user-specific memory
+        user_name = message.from_user.first_name  # ✅ Capture user's name
         user_memory = memory.chat_memory.get(user_id, [])
         
-        # ✅ Step 2: Append the user's latest message to their memory
-        user_memory.append({"role": "user", "content": message.text})
+        # ✅ Step 2: Append the user's latest message to their memory, including their name
+        user_memory.append({"role": "user", "content": f"{user_name}: {message.text}"})
         
         # ✅ Step 3: Prepare conversation using system prompt and user memory
-        conversation = [{"role": "system", "content": system_prompt}] + user_memory[-15:]  # Keep last 15 messages
+        conversation = [{"role": "system", "content": f"{system_prompt} Always refer to the user by their name: {user_name}."}] + user_memory[-15:]  # Keep last 15 messages
 
         for attempt in range(2):  # Retry up to 2 times
             try:
                 response = client.chat.completions.create(
-                    model="meta-llama/llama-3.1-405b-instruct:free",
+                    model="meta-llama/llama-3.3-70b-instruct:free",
                     messages=conversation,
                     temperature=0.7,  # Adjusts creativity for a natural response
                     max_tokens=200,   # Limits response length to stay concise
@@ -72,6 +72,5 @@ def process_ai_response(message, user_id, chat_id):
     except Exception as e:
         bot.send_message(chat_id, "Oops, something went wrong.")
         print(f"AI error: {e}")
-        
-                      
+
 print("Sassy Telegram bot is running...")
