@@ -43,7 +43,7 @@ def fortune(message):
         return
     
     response = client.chat.completions.create(
-        model="deepseek/deepseek-r1:free",
+        model="meta-llama/llama-3.3-70b-instruct:free",
         messages=[{"role": "system", "content": "You are a fortune teller"},
                   {"role": "user", "content": question}]
     )
