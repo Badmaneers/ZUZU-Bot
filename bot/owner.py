@@ -166,6 +166,14 @@ def register_owner_commands(bot):
         except Exception as e:
             logging.error(f"Error reading logs: {e}")
             bot.reply_to(message, f"❌ Error reading logs: {e}")
+    
+    @bot.message_handler(commands=['register'])
+    def register_group(message):
+      chat_id = str(message.chat.id)
+      with open("bot/groups.txt", "a") as file:
+        if chat_id not in open("bot/groups.txt").read():
+            file.write(f"{chat_id}\n")
+      bot.reply_to(message, "✅ This group has been registered successfully!")
 
 # ✅ Fetch groups when the bot starts
 fetch_existing_groups()
