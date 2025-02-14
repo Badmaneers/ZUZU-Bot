@@ -111,8 +111,8 @@ def send_ai_generated_quote():
 # ✅ Schedule AI Messages Automatically
 def schedule_ai_quotes():
     while True:
+        sleep_time = random.randint(3*60*60, 24*60*60)  # Random time between 3 hours and 24 hours
         send_ai_generated_quote()
-        sleep_time = random.randint(3*60*60, 24*60*60)  # Random time between 2 hours and 24 hours
         time.sleep(sleep_time)
 
 def start_ai_quote_scheduler():
@@ -124,30 +124,39 @@ def start_ai_quote_scheduler():
 def register_owner_commands(bot):
     @bot.message_handler(commands=['broadcast'])
     @owner_only
+    # ✅ Broadcast Message with Optional Header
     def broadcast(message):
-        text = message.text.replace("/broadcast", "").strip()
-        if not text:
-            bot.reply_to(message, "📢 Please provide a message to broadcast.")
+      """Broadcasts a message to all groups with an optional flag to remove header."""
+      text = message.text.replace("/broadcast", "").strip()
+      if not text:
+        bot.reply_to(message, "📢 Please provide a message to broadcast.")
+        return
+    
+      remove_header = False
+      if "--no-header" in text:
+        remove_header = True
+        text = text.replace("--no-header", "").strip()
+    
+      try:
+        with open(GROUPS_FILE, "r") as file:
+            group_ids = file.readlines()
+        
+        if not group_ids:
+            bot.reply_to(message, "🚫 No groups found to broadcast.")
             return
         
-        try:
-            with open(GROUPS_FILE, "r") as file:
-                group_ids = file.readlines()
-            
-            if not group_ids:
-                bot.reply_to(message, "🚫 No groups found to broadcast.")
-                return
-            
-            for group_id in group_ids:
-                try:
-                    bot.send_message(group_id.strip(), f"📢 Broadcast from the owner:\n\n{text}")
-                    logging.info(f"Broadcast sent to {group_id.strip()}")
-                except Exception as e:
-                    logging.error(f"Failed to send to {group_id.strip()}: {e}")
+        for group_id in group_ids:
+            try:
+                broadcast_text = text if remove_header else f"📢 Broadcast from the owner:\n\n{text}"
+                bot.send_message(group_id.strip(), broadcast_text)
+                logging.info(f"Broadcast sent to {group_id.strip()}")
+            except Exception as e:
+                logging.error(f"Failed to send to {group_id.strip()}: {e}")
 
-            bot.reply_to(message, "✅ Broadcast sent successfully!")
-        except FileNotFoundError:
-            bot.reply_to(message, "🚫 `groups.txt` not found. Add groups first.")
+        bot.reply_to(message, "✅ Broadcast sent successfully!")
+      except FileNotFoundError:
+        bot.reply_to(message, "🚫 `groups.txt` not found. Add groups first.")
+
 
     @bot.message_handler(commands=['restart'])
     @owner_only
