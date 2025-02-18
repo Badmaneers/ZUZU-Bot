@@ -1,0 +1,77 @@
+{
+    "-1002292773498": {
+        "gsi-flashable-rui2": {
+            "text": "*gsi-flashable-rui2*",
+            "buttons": [
+                {
+                    "text": "Miku-UI-Android-14",
+                    "url": "https://drive.google.com/file/d/1LLSU4bn_FdUTsOd1Ba-I1Trijay1fQ4L/view?usp=drivesdk"
+                },
+                {
+                    "text": "EVOLUTION-X-Android-14(Pastillas)",
+                    "url": "https://drive.google.com/file/d/1E-7ytJujOqSXN5byc8qRKmVd8fQNAIHC/view?usp=drivesdk"
+                },
+                {
+                    "text": "EVOLUTION-X-Android-14(Balut)",
+                    "url": "https://drive.google.com/file/d/1Tr4NGspS7FzjeX_LPx9htL_oTYmq0oKp/view?usp=drive_link"
+                },
+                {
+                    "text": "EVOLUTION-X-Android-12",
+                    "url": "https://drive.google.com/file/d/1-3OTXD3oQmjPnYEV2HVg7WB3f_aJ0j0E/view?usp=drivesdk"
+                },
+                {
+                    "text": "Project-Elixir-Android-13",
+                    "url": "https://drive.google.com/file/d/1-4Mg5-IV9Z6QdGinGj6XJr9NnR-UdE8A/view?usp=drivesdk"
+                }
+            ]
+        },
+        "rose": {
+            "text": "rose",
+            "buttons": []
+        },
+        "gsi-flashable-rui2.": {
+            "text": "Hajaha",
+            "buttons": []
+        },
+        "t": {
+            "text": "\u26a0\ufe0f Usage: `/save <title> <content>` (or reply to a message with `/save <title>`)",
+            "buttons": []
+        },
+        "g": {
+            "text": "*g*",
+            "buttons": [
+                {
+                    "text": "rui2",
+                    "url": "https://example.com"
+                }
+            ]
+        }
+    },
+    "-1002290986459": {
+        "gsi-flashable-rui2": {
+            "text": "Hm",
+            "buttons": [
+                {
+                    "text": "Miku-UI-Android-14",
+                    "url": "https://drive.google.com/file/d/1LLSU4bn_FdUTsOd1Ba-I1Trijay1fQ4L/view?usp=drivesdk"
+                },
+                {
+                    "text": "EVOLUTION-X-Android-14(Pastillas)",
+                    "url": "https://drive.google.com/file/d/1E-7ytJujOqSXN5byc8qRKmVd8fQNAIHC/view?usp=drivesdk"
+                },
+                {
+                    "text": "EVOLUTION-X-Android-14(Balut)",
+                    "url": "https://drive.google.com/file/d/1Tr4NGspS7FzjeX_LPx9htL_oTYmq0oKp/view?usp=drive_link"
+                },
+                {
+                    "text": "EVOLUTION-X-Android-12",
+                    "url": "https://drive.google.com/file/d/1-3OTXD3oQmjPnYEV2HVg7WB3f_aJ0j0E/view?usp=drivesdk"
+                },
+                {
+                    "text": "Project-Elixir-Android-13",
+                    "url": "https://drive.google.com/file/d/1-4Mg5-IV9Z6QdGinGj6XJr9NnR-UdE8A/view?usp=drivesdk"
+                }
+            ]
+        }
+    }
+}
