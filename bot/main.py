@@ -9,6 +9,8 @@ from fun import register_fun_handlers
 from owner import register_owner_commands, fetch_existing_groups
 import logging
 import fun
+from notes import register_notes_handlers
+
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OWNER_ID = int(os.getenv("OWNER_ID"))
@@ -78,6 +80,7 @@ def help_message(message):
 
 bot.message_handler(commands=['fortune'])(fortune)
 register_fun_handlers(bot)
+register_notes_handlers(bot)
 fetch_existing_groups()
 register_owner_commands(bot)
 bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
