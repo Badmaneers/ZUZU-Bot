@@ -171,11 +171,12 @@ def register_notes_handlers(bot):
 
     @bot.message_handler(commands=['notes'])
     def list_notes(message):
-        """Lists all saved notes."""
-        chat_id = str(message.chat.id)
-        if chat_id in notes and notes[chat_id]:
-            note_titles = "\n".join(f"📌 {title}" for title in notes[chat_id])
-            bot.reply_to(message, f"📝 Saved Notes:\n\n{note_titles}")
-        else:
-            bot.reply_to(message, "📭 No saved notes found!")
+      """Lists all saved notes."""
+      chat_id = str(message.chat.id)
+    
+      if chat_id in notes and notes[chat_id]:
+        note_titles = "\n".join((f"• `{title}`" for title in notes[chat_id]))
+        bot.reply_to(message, f"📝 Saved Notes:\n\n{note_titles}\nTap and copy the note title and use `/note example_note`.", parse_mode="Markdown")
+      else:
+        bot.reply_to(message, "📭 No saved notes found!")
 
