@@ -86,45 +86,46 @@ def register_notes_handlers(bot):
 
     @bot.message_handler(commands=['note'])
     def get_note(message):
-        """Retrieves a saved note and sends it with buttons if available."""
-        parts = message.text.split(" ", 1)
-        if len(parts) < 2:
-            bot.reply_to(message, "⚠️ Usage: `/note <title>`")
-            return
-        
-        title = parts[1].strip()
-        chat_id = str(message.chat.id)
+     """Retrieves a saved note and replies to the user with buttons if available."""
+     parts = message.text.split(" ", 1)
+     if len(parts) < 2:
+        bot.reply_to(message, "⚠️ Usage: `/note <title>`")
+        return
+    
+     title = parts[1].strip()
+     chat_id = str(message.chat.id)
 
-        if chat_id in notes and title in notes[chat_id]:
-            note = notes[chat_id][title]
-            markup = InlineKeyboardMarkup()
-            for btn in note.get("buttons", []):
-                markup.add(InlineKeyboardButton(btn["text"], url=btn["url"]))
+     if chat_id in notes and title in notes[chat_id]:
+        note = notes[chat_id][title]
+        markup = InlineKeyboardMarkup()
+        for btn in note.get("buttons", []):
+            markup.add(InlineKeyboardButton(btn["text"], url=btn["url"]))
 
-            text = note["text"].strip() if note["text"].strip() else f"*{title}*"
+        text = note["text"].strip() if note["text"].strip() else f"*{title}*"
 
-            # Send saved file if it's a media note
-            if "file" in note:
-                file_info = note["file"]
-                content_type = file_info["content_type"]
-                caption = text  # Use the processed text
+        # ✅ Reply to the original command instead of sending a new message
+        if "file" in note:
+            file_info = note["file"]
+            content_type = file_info["content_type"]
+            caption = text  # Use the processed text
 
-                if content_type == "photo":
-                    bot.send_photo(message.chat.id, file_info["file_id"], caption=caption, reply_markup=markup, parse_mode="Markdown")
-                elif content_type == "audio":
-                    bot.send_audio(message.chat.id, file_info["file_id"], caption=caption, reply_markup=markup, parse_mode="Markdown")
-                elif content_type == "video":
-                    bot.send_video(message.chat.id, file_info["file_id"], caption=caption, reply_markup=markup, parse_mode="Markdown")
-                elif content_type == "document":
-                    bot.send_document(message.chat.id, file_info["file_id"], caption=caption, reply_markup=markup, parse_mode="Markdown")
-                elif content_type == "voice":
-                    bot.send_voice(message.chat.id, file_info["file_id"], reply_markup=markup)
-                else:
-                    bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode="Markdown")
+            if content_type == "photo":
+                bot.send_photo(message.chat.id, file_info["file_id"], caption=caption, reply_markup=markup, parse_mode="Markdown", reply_to_message_id=message.message_id)
+            elif content_type == "audio":
+                bot.send_audio(message.chat.id, file_info["file_id"], caption=caption, reply_markup=markup, parse_mode="Markdown", reply_to_message_id=message.message_id)
+            elif content_type == "video":
+                bot.send_video(message.chat.id, file_info["file_id"], caption=caption, reply_markup=markup, parse_mode="Markdown", reply_to_message_id=message.message_id)
+            elif content_type == "document":
+                bot.send_document(message.chat.id, file_info["file_id"], caption=caption, reply_markup=markup, parse_mode="Markdown", reply_to_message_id=message.message_id)
+            elif content_type == "voice":
+                bot.send_voice(message.chat.id, file_info["file_id"], reply_markup=markup, reply_to_message_id=message.message_id)
             else:
-                bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode="Markdown")
+                bot.reply_to(message, text, reply_markup=markup, parse_mode="Markdown")
         else:
-            bot.reply_to(message, "❌ Note not found! Use `/save` to create one.")
+            bot.reply_to(message, text, reply_markup=markup, parse_mode="Markdown")
+     else:
+        bot.reply_to(message, "❌ Note not found! Use `/save` to create one.")
+
 
     def extract_buttons(text):
         """Extracts inline buttons from text and ensures correct Telegram button format."""
