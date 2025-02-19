@@ -7,6 +7,7 @@ import threading
 from ai_response import process_ai_response
 import time
 import random
+from moderations import is_admin
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -123,11 +124,16 @@ def start_ai_quote_scheduler():
 # ✅ Register All Owner Commands
 def register_owner_commands(bot):
     @bot.message_handler(commands=['broadcast'])
-    @owner_only
     # ✅ Broadcast Message with Optional Header
     def broadcast(message):
       """Broadcasts a message to all groups with an optional flag to remove header."""
       text = message.text.replace("/broadcast", "").strip()
+      chat_id = message.chat.id
+      user_id = message.from_user.id
+      if not is_admin(chat_id, user_id):
+        bot.reply_to(message, "🚫 Only admins can use this command!")
+        return
+    
       if not text:
         bot.reply_to(message, "📢 Please provide a message to broadcast.")
         return
