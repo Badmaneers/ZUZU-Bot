@@ -8,11 +8,12 @@ from ai_response import process_ai_response
 import time
 import random
 from moderations import is_admin
+from notes import load_notes
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 OWNER_ID = int(os.getenv("OWNER_ID"))
-
+NOTES_FILE = "notes.json"
 
 # ✅ Configure Logging
 logging.basicConfig(
@@ -123,6 +124,47 @@ def start_ai_quote_scheduler():
 
 # ✅ Register All Owner Commands
 def register_owner_commands(bot):
+    @bot.message_handler(commands=['export'])
+    @owner_only
+    def export_notes(message):
+        """Exports the notes.json file and sends it to the user."""
+        try:
+            with open(NOTES_FILE, "rb") as file:
+                bot.send_document(message.chat.id, file, caption="📂 Here is the exported `notes.json` file.")
+        except Exception as e:
+            bot.reply_to(message, f"❌ Error exporting notes: {e}")
+            
+    @bot.message_handler(commands=['import'])
+    @owner_only
+    def request_import(message):
+      """Instructs the user to upload a `.json` file."""
+      bot.reply_to(message, "📥 Please send a `.json` file to import notes.")
+
+    @bot.message_handler(content_types=['document'])
+    def import_notes(message):
+     """Imports a new notes.json file when uploaded via /import."""
+     file_name = message.document.file_name
+
+     if not file_name.endswith(".json"):
+        bot.reply_to(message, "⚠️ Only `.json` files are allowed for import.")
+        return
+
+     file_id = message.document.file_id
+     file_info = bot.get_file(file_id)
+     downloaded_file = bot.download_file(file_info.file_path)
+
+     try:
+        # ✅ Save the uploaded file as `notes.json`
+        with open("notes.json", "wb") as file:
+            file.write(downloaded_file)
+
+        global notes
+        notes = load_notes()  # ✅ Reload notes after import
+        bot.reply_to(message, "✅ `notes.json` imported successfully!")
+     except Exception as e:
+        bot.reply_to(message, f"❌ Error importing notes: {e}")
+        
+            
     @bot.message_handler(commands=['broadcast'])
     # ✅ Broadcast Message with Optional Header
     def broadcast(message):
