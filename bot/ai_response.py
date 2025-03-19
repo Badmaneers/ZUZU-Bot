@@ -46,8 +46,8 @@ def process_ai_response(message, user_id, chat_id):
                 response = client.chat.completions.create(
                     model="meta-llama/llama-3.3-70b-instruct:free",
                     messages=conversation,
-                    temperature=0.7,  # Adjusts creativity for a natural response
-                    max_tokens=200,   # Limits response length to stay concise
+                    temperature=0.9,  # Adjusts creativity for a natural response
+                    #max_tokens=200,   # Limits response length to stay concise
                     top_p=0.9         # Makes responses more varied
                 )
 
