@@ -78,6 +78,9 @@ def help_message(message):
             "/logs - Fetch the last 10 logs\n"
         )
     bot.reply_to(message, help_text, parse_mode="HTML")
+    
+# ---- Fun handler ----
+register_fun_handlers(bot)
 
 # --- AI Response Handler ---
 @bot.message_handler(func=lambda message: 
@@ -89,13 +92,13 @@ def handle_ai_response(message):
 
 # --- Register Other Handlers ---
 bot.message_handler(commands=['fortune'])(fortune)
-register_fun_handlers(bot)
 notes.register_notes_handlers(bot)
 fetch_existing_groups()
 register_owner_commands(bot)
 bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
 bot.message_handler(commands=['mute', 'unmute', 'warn', 'ban'])(moderation_commands)
 bot.message_handler(func=lambda message: message.text is not None)(auto_moderate)
+
 
 # --- Start the Bot ---
 if __name__ == "__main__":
