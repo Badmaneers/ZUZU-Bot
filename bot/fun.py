@@ -1,6 +1,5 @@
 from helper import load_from_file
 import random
-import os
 import telebot
 
 # Remove bot initialization, it will be passed from main.py
@@ -12,10 +11,10 @@ def register_fun_handlers(bot):
     @bot.message_handler(commands=['roast', 'motivate'])
     def fun(message):
         target = message.reply_to_message or message  # Defaults to sender if no reply
-        
+        target_user = target.from_user  # The user to whom the bot will reply
+
         if message.text.startswith("/roast"):
-            bot.reply_to(target, f"{target.from_user.first_name}, {random.choice(roasts)}")
+            bot.reply_to(target, f"{target_user.first_name}, {random.choice(roasts)}")
 
         elif message.text.startswith("/motivate"):
-            bot.reply_to(target, f"{target.from_user.first_name}, {random.choice(motivations)}")
-            
+            bot.reply_to(target, f"{target_user.first_name}, {random.choice(motivations)}")
