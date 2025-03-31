@@ -24,10 +24,15 @@ def is_admin(chat_id, user_id):
     return any(admin.user.id == user_id for admin in chat_admins)
 
 def bot_is_admin(chat_id):
-    """Check if the bot itself is an admin."""
-    bot_id = bot.get_me().id
-    chat_admins = bot.get_chat_administrators(chat_id)
-    return any(admin.user.id == bot_id for admin in chat_admins)
+    """Check if the bot itself is an admin in a group chat."""
+    try:
+        bot_id = bot.get_me().id
+        chat_admins = bot.get_chat_administrators(chat_id)
+        return any(admin.user.id == bot_id for admin in chat_admins)
+    except telebot.apihelper.ApiTelegramException as e:
+        if "no administrators in the private chat" in str(e):
+            return False  # Private chats have no admins, so return False safely
+        raise  # Re-raise any other exceptions
 
 # Auto-Greeting New Users
 @bot.message_handler(content_types=['new_chat_members'])
