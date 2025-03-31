@@ -2,7 +2,7 @@ import telebot
 import os
 import time
 from openai import OpenAI
-from helper import load_from_file 
+from helper import load_from_file
 import memory
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -28,49 +28,58 @@ def load_prompt():
 
 system_prompt = load_prompt()
 
-# ========== AI Chat System with Enhanced Memory & User Awareness ==========
-def process_ai_response(message, user_id, chat_id):
-    """Handles AI responses efficiently, maintaining natural conversation and remembering user names."""
+# ========== AI Response Handling ==========
+def process_ai_response(message):
+    """Handles AI responses in groups (only when replied to) and in DMs (always)."""
     try:
-        user_name = message.from_user.first_name  # ✅ Capture user's name
-        user_memory = memory.chat_memory.get(user_id, [])
-        
-        # ✅ Step 2: Append the user's latest message to their memory, including their name
-        user_memory.append({"role": "user", "content": f"{user_name}: {message.text}"})
-        
-        # ✅ Step 3: Prepare conversation using system prompt and user memory
-        conversation = [{"role": "system", "content": f"{system_prompt} Always refer to the user by their name: {user_name}."}] + user_memory[-15:]  # Keep last 15 messages
+        chat_id = message.chat.id
+        user_id = str(message.from_user.id)  # Ensure consistency in memory keys
+        user_name = message.from_user.first_name
+        chat_type = message.chat.type  # "private", "group", "supergroup"
 
-        for attempt in range(2):  # Retry up to 2 times
+        is_private = chat_type == "private"
+        is_reply_to_bot = message.reply_to_message and message.reply_to_message.from_user.id == bot.get_me().id if message.reply_to_message else False
+
+        # ✅ In groups, only respond if the bot is directly replied to
+        if not is_private and not is_reply_to_bot:
+            return  
+
+        # ✅ Retrieve or initialize user memory
+        user_memory = memory.chat_memory.get(user_id, [])
+        user_memory.append({"role": "user", "content": f"{user_name}: {message.text}"})
+
+        # ✅ Create conversation context
+        conversation = [{"role": "system", "content": f"{system_prompt} Always refer to the user by their name: {user_name}."}] + user_memory[-15:]
+
+        for attempt in range(2):
             try:
                 response = client.chat.completions.create(
                     model="meta-llama/llama-3.3-70b-instruct:free",
                     messages=conversation,
-                    temperature=0.9,  # Adjusts creativity for a natural response
-                    #max_tokens=200,   # Limits response length to stay concise
-                    top_p=0.9         # Makes responses more varied
+                    temperature=0.9,
+                    top_p=0.9
                 )
 
                 if response.choices:
                     ai_reply = response.choices[0].message.content.strip()
                     
-                    # ✅ Step 4: Append AI response to user memory
+                    # ✅ Store response in memory
                     user_memory.append({"role": "assistant", "content": ai_reply})
                     memory.chat_memory[user_id] = user_memory[-15:]  # Keep last 15 messages
-                    memory.save_memory()
-                    
-                    bot.send_message(chat_id, ai_reply, reply_to_message_id=message.message_id)
-                    return  # Exit after successful response
+                    memory.save_memory()  # Save instantly
+
+                    # ✅ Send response, but don’t force reply in DMs
+                    bot.send_message(chat_id, ai_reply, reply_to_message_id=message.message_id if not is_private else None)
+                    return
                 
             except Exception as e:
                 print(f"AI backend error: {e}, retrying... ({attempt + 1})")
-                time.sleep(2)  # Short delay before retrying
+                time.sleep(2)
 
-        # If all retries fail, send an error message
-        bot.send_message(chat_id, "Oops, my brain lagged out. Try again later! 😭")
+        bot.send_message(chat_id, "Ugh, my brain lagged out. Try again later! 😭")
 
     except Exception as e:
         bot.send_message(chat_id, "Oops, something went wrong.")
         print(f"AI error: {e}")
 
-print("Sassy Telegram bot is running...")
+print("Zuzu is online and ready to slay!")
