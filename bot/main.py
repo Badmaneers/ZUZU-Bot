@@ -4,7 +4,7 @@ from openai import OpenAI
 import random
 import threading
 from fortune import fortune
-from moderations import greet_new_member , mute_unmute , auto_moderate
+from moderations import greet_new_member , moderation_commands , auto_moderate
 from fun import register_fun_handlers
 from owner import register_owner_commands, fetch_existing_groups
 import logging
@@ -84,7 +84,7 @@ register_notes_handlers(bot)
 fetch_existing_groups()
 register_owner_commands(bot)
 bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
-bot.message_handler(commands=['mute' , 'unmute' , 'warn' , 'ban'])(mute_unmute)
+bot.message_handler(commands=['mute' , 'unmute' , 'warn' , 'ban'])(moderation_commands)
 bot.message_handler(func=lambda message: message.text is not None)(auto_moderate)
 
 bot.infinity_polling()
