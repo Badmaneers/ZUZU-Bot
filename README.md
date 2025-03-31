@@ -79,7 +79,8 @@ bash run.sh
 | `/notes` | To list all notes 🗒️ |
 | `/note <note name> ` | To get a note |
 | `/save` | Save notes 📝 |
-| `/delnote` Delete a note |
+| `/delnote` | Delete a note |
+| `/toggle_notes` | To enable/disable notes in a group |
 
 
 ### 📢 Owner Commands
