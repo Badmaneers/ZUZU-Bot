@@ -99,14 +99,16 @@ def send_ai_generated_quote():
             logging.warning("No groups found to send AI-generated messages.")
             return
         
+        prompt = "Give me an original motivational quote or a savage roast."
+        
         for group_id in group_ids:
-            user_id = str(group_id)
-            message = type("Message", (object,), {
-                "text": "Give me an original motivational quote or a savage roast.",
-                "message_id": 0,
-                "from_user": type("User", (object,), {"id": group_id, "first_name": "Group Chat"})()
-            })()
-            process_ai_response(message, user_id, group_id)
+            try:
+                # Use the direct method with group_id and message_text parameters
+                process_ai_response(None, group_id, prompt)
+                logging.info(f"AI quote request sent to group {group_id}")
+            except Exception as e:
+                logging.error(f"Failed to send AI quote to group {group_id}: {e}")
+                
     except Exception as e:
         logging.error(f"Error sending AI-generated messages: {e}")
 

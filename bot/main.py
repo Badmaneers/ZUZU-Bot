@@ -1,12 +1,12 @@
 import os
 import logging
 import telebot
-from openai import OpenAI
+import memory  # Import memory first to initialize database
+from ai_response import process_ai_response
 from fortune import fortune
 from moderations import greet_new_member, moderation_commands, auto_moderate
 from fun import register_fun_handlers
 from owner import register_owner_commands, fetch_existing_groups
-from ai_response import process_ai_response
 import notes
 
 # Load environment variables
@@ -81,7 +81,15 @@ def help_message(message):
     
 # ---- Fun handler ----
 register_fun_handlers(bot)
+# ----- Fortune handler -----
+bot.message_handler(commands=['fortune'])(fortune)
 
+# --- Register Other Handlers ---
+notes.register_notes_handlers(bot)
+fetch_existing_groups()
+register_owner_commands(bot)
+bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
+bot.message_handler(commands=['mute', 'unmute', 'warn', 'ban'])(moderation_commands)
 # --- AI Response Handler ---
 @bot.message_handler(func=lambda message: 
                      message.chat.type == "private" or 
@@ -89,14 +97,8 @@ register_fun_handlers(bot)
                       message.reply_to_message.from_user.id == bot.get_me().id))
 def handle_ai_response(message):
     process_ai_response(message)
-
-# --- Register Other Handlers ---
-bot.message_handler(commands=['fortune'])(fortune)
-notes.register_notes_handlers(bot)
-fetch_existing_groups()
-register_owner_commands(bot)
-bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
-bot.message_handler(commands=['mute', 'unmute', 'warn', 'ban'])(moderation_commands)
+    
+# This should be registered AFTER all other command handlers
 bot.message_handler(func=lambda message: message.text is not None)(auto_moderate)
 
 
