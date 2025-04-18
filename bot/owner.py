@@ -8,12 +8,12 @@ from ai_response import process_ai_response
 import time
 import random
 from moderations import is_admin
-from notes import load_notes
+from notes import load_notes, save_notes
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 OWNER_ID = int(os.getenv("OWNER_ID"))
-NOTES_FILE = "notes.json"
+NOTES_DIR = "notes"
 
 # ✅ Configure Logging
 logging.basicConfig(
@@ -77,8 +77,6 @@ def fetch_existing_groups():
     except Exception as e:
         logging.error(f"Error fetching existing group IDs: {e}")
 
-
-
 # ✅ Owner-Only Decorator
 def owner_only(func):
     def wrapper(message):
@@ -129,44 +127,52 @@ def register_owner_commands(bot):
     @bot.message_handler(commands=['export'])
     @owner_only
     def export_notes(message):
-        """Exports the notes.json file and sends it to the user."""
-        try:
-            with open(NOTES_FILE, "rb") as file:
-                bot.send_document(message.chat.id, file, caption="📂 Here is the exported `notes.json` file.")
-        except Exception as e:
-            bot.reply_to(message, f"❌ Error exporting notes: {e}")
-            
+        """Exports the notes of a group as a .json file."""
+        chat_id = str(message.chat.id)
+        notes_file = os.path.join(NOTES_DIR, f"{chat_id}.json")
+        
+        if os.path.exists(notes_file):
+            try:
+                with open(notes_file, "rb") as file:
+                    bot.send_document(message.chat.id, file, caption=f"📂 Here is the exported notes for group {chat_id}.")
+            except Exception as e:
+                bot.reply_to(message, f"❌ Error exporting notes: {e}")
+        else:
+            bot.reply_to(message, "❌ No notes found for this group!")
+
     @bot.message_handler(commands=['import'])
     @owner_only
     def request_import(message):
-      """Instructs the user to upload a `.json` file."""
-      bot.reply_to(message, "📥 Please send a `.json` file to import notes.")
+        """Instructs the user to upload a `.json` file."""
+        bot.reply_to(message, "📥 Please send a `.json` file to import notes.")
 
     @bot.message_handler(content_types=['document'])
     def import_notes(message):
-     """Imports a new notes.json file when uploaded via /import."""
-     file_name = message.document.file_name
+        """Imports a new notes file for the group when uploaded via /import."""
+        file_name = message.document.file_name
 
-     if not file_name.endswith(".json"):
-        bot.reply_to(message, "⚠️ Only `.json` files are allowed for import.")
-        return
+        if not file_name.endswith(".json"):
+            bot.reply_to(message, "⚠️ Only `.json` files are allowed for import.")
+            return
 
-     file_id = message.document.file_id
-     file_info = bot.get_file(file_id)
-     downloaded_file = bot.download_file(file_info.file_path)
+        file_id = message.document.file_id
+        file_info = bot.get_file(file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
 
-     try:
-        # ✅ Save the uploaded file as `notes.json`
-        with open("notes.json", "wb") as file:
-            file.write(downloaded_file)
-
-        global notes
-        notes = load_notes()  # ✅ Reload notes after import
-        bot.reply_to(message, "✅ `notes.json` imported successfully!")
-     except Exception as e:
-        bot.reply_to(message, f"❌ Error importing notes: {e}")
-        
+        try:
+            chat_id = str(message.chat.id)
+            notes_file = os.path.join(NOTES_DIR, f"{chat_id}.json")
             
+            # ✅ Save the uploaded file as the group's notes
+            with open(notes_file, "wb") as file:
+                file.write(downloaded_file)
+
+            # Reload notes after import
+            load_notes(chat_id)
+            bot.reply_to(message, f"✅ Notes imported successfully for group {chat_id}!")
+        except Exception as e:
+            bot.reply_to(message, f"❌ Error importing notes: {e}")
+
     @bot.message_handler(commands=['broadcast'])
     # ✅ Broadcast Message with Optional Header
     def broadcast(message):
@@ -207,7 +213,6 @@ def register_owner_commands(bot):
       except FileNotFoundError:
         bot.reply_to(message, "🚫 `groups.txt` not found. Add groups first.")
 
-
     @bot.message_handler(commands=['restart'])
     @owner_only
     def restart_bot(message):
@@ -228,11 +233,11 @@ def register_owner_commands(bot):
     
     @bot.message_handler(commands=['register'])
     def register_group(message):
-      chat_id = str(message.chat.id)
-      with open("bot/groups.txt", "a") as file:
-        if chat_id not in open("bot/groups.txt").read():
-            file.write(f"{chat_id}\n")
-      bot.reply_to(message, "✅ This group has been registered successfully!")
+        chat_id = str(message.chat.id)
+        with open("bot/groups.txt", "a") as file:
+            if chat_id not in open("bot/groups.txt").read():
+                file.write(f"{chat_id}\n")
+        bot.reply_to(message, "✅ This group has been registered successfully!")
 
 # ✅ Fetch groups when the bot starts
 fetch_existing_groups()

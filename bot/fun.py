@@ -1,57 +1,101 @@
-from helper import load_from_file
-import random
 import os
-import telebot
+import json
+import random
 import time
+import telebot
+from helper import load_from_file
 
-# Load environment variables
+# ——— Bot Initialization ———————————————————————————————
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Store last message timestamps for rate limiting (per group)
+# ——— Rate‑Limit Tracker & Config —————————————————————————
+# Structure: { chat_id: { user_id: [timestamps] } }
 rate_limit_tracker = {}
 
-# Load roasts and motivations
-roasts = load_from_file("bot/roasts.txt", ["You're like a software update: Nobody wants you, but we’re stuck with you."])
-motivations = load_from_file("bot/motivations.txt", ["Keep shining like the star you are!"])
+def load_config():
+    try:
+        with open("config.json", "r") as f:
+            return json.load(f)
+    except:
+        # default: 3 uses per 300 seconds (5 minutes)
+        return {"max_usage": 3, "timeout": 300}
+
+config = load_config()
+
+def check_rate_limit(chat_id, user_id):
+    now = time.time()
+    chat_limits = rate_limit_tracker.setdefault(str(chat_id), {})
+    times = chat_limits.setdefault(str(user_id), [])
+    # purge old entries
+    times[:] = [t for t in times if now - t < config["timeout"]]
+    if len(times) >= config["max_usage"]:
+        return False
+    times.append(now)
+    return True
+
+# ——— Load Content ————————————————————————————————————————
+roasts      = load_from_file("bot/roasts.txt",      ["No roast available right now."])
+motivations = load_from_file("bot/motivations.txt", ["No motivation available right now."])
+
+# ——— Handlers Registration ——————————————————————————————
 
 def register_fun_handlers(bot):
-    """Registers /roast and /motivate commands to the bot instance"""
-    @bot.message_handler(commands=['roast', 'motivate'])
-    def fun(message):
+    @bot.message_handler(commands=['roast'])
+    def roast_cmd(message):
         chat_id = message.chat.id
-        is_private = message.chat.type == "private"
-        now = time.time()
+        user_id = message.from_user.id
 
-        # Rate limit: Allow only 3 messages per 5 minutes in groups
-        if not is_private:
-            if chat_id not in rate_limit_tracker:
-                rate_limit_tracker[chat_id] = []
-            
-            # Remove expired timestamps (older than 5 minutes)
-            rate_limit_tracker[chat_id] = [t for t in rate_limit_tracker[chat_id] if now - t < 300]
+        # Rate‑limit in groups
+        if message.chat.type != "private" and not check_rate_limit(chat_id, user_id):
+            return bot.reply_to(
+                message,
+                f"🐢 Slow down! You get {config['max_usage']} roasts every {config['timeout']//60} min."
+            )
 
-            if len(rate_limit_tracker[chat_id]) >= 3:
-                bot.reply_to(message, "Slow down! You can only use /roast or /motivate 3 times every 5 minutes.")
-                return
+        # Determine target
+        target = message.reply_to_message.from_user if message.reply_to_message else message.from_user
+        target_id   = target.id
+        target_name = target.first_name
 
-            # Add current timestamp
-            rate_limit_tracker[chat_id].append(now)
-
-        # Determine target (either replied user or sender)
-        target = message.reply_to_message or message
-        target_name = target.from_user.first_name
-        target_id = target.from_user.id
-        
-        # Handle mentions if in group and bot is not an admin
-        if not is_private and message.reply_to_message is None:
-            mention = f'<a href="tg://user?id={target_id}">{target_name}</a>'
+        # Build mention
+        if message.chat.type == "private":
+            mention = target_name
         else:
-            mention = target_name  # Use direct name in DMs or replies
+            mention = f'<a href="tg://user?id={target_id}">{target_name}</a>'
 
-        # Send the response
-        if message.text.startswith("/roast"):
-            bot.send_message(chat_id, f"{mention}, {random.choice(roasts)}", parse_mode="HTML")
+        # Pick and send
+        text = random.choice(roasts)
+        bot.send_message(chat_id, f"{mention}, {text}", parse_mode="HTML")
 
-        elif message.text.startswith("/motivate"):
-            bot.send_message(chat_id, f"{mention}, {random.choice(motivations)}", parse_mode="HTML")
+    @bot.message_handler(commands=['motivate'])
+    def motivate_cmd(message):
+        chat_id = message.chat.id
+        user_id = message.from_user.id
+
+        # Rate‑limit in groups
+        if message.chat.type != "private" and not check_rate_limit(chat_id, user_id):
+            return bot.reply_to(
+                message,
+                f"🐢 Slow down! You get {config['max_usage']} motivations every {config['timeout']//60} min."
+            )
+
+        # Determine target
+        target = message.reply_to_message.from_user if message.reply_to_message else message.from_user
+        target_id   = target.id
+        target_name = target.first_name
+
+        # Build mention
+        if message.chat.type == "private":
+            mention = target_name
+        else:
+            mention = f'<a href="tg://user?id={target_id}">{target_name}</a>'
+
+        # Pick and send
+        text = random.choice(motivations)
+        bot.send_message(chat_id, f"{mention}, {text}", parse_mode="HTML")
+
+    print("✅ Fun handlers registered.")
+
+# ——— Register on Import ——————————————————————————————————
+register_fun_handlers(bot)
