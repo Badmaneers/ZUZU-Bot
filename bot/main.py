@@ -34,7 +34,7 @@ def contribute(message):
     bot.reply_to(
         message,
         ("Want to contribute to my sass and moderation skills? 🛠️\n\n"
-         "Check out my GitHub repository: [https://github.com/Badmaneers/Mod-Queen-Bot]\n"
+         "Check out my GitHub repository: [https://github.com/Badmaneers/ZUZU-Bot]\n"
          "Feel free to submit issues, suggest new features, or fork the repo and make pull requests!\n\n"
          "Every contribution helps make me even better! 🚀")
     )
@@ -68,7 +68,7 @@ def help_message(message):
         "/notes - List all notes 📜\n"
         "/toggle_notes - Enable/Disable notes in the group 📝\n\n"
         "<b>🛠 Contribute:</b>\n"
-        "/contribute - Help make me better!\n"
+        "/contribute - Contribute to my sass!!\n"
     )
     if message.from_user.id == OWNER_ID:
         help_text += (
@@ -91,13 +91,10 @@ register_owner_commands(bot)
 bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
 bot.message_handler(commands=['mute', 'unmute', 'warn', 'ban'])(moderation_commands)
 # --- AI Response Handler ---
-@bot.message_handler(func=lambda message: 
-                     message.chat.type == "private" or 
-                     (message.reply_to_message is not None and 
-                      message.reply_to_message.from_user.id == bot.get_me().id))
-def handle_ai_response(message):
+@bot.message_handler(func=lambda message: message.text is not None)
+def handle_text(message):  
     process_ai_response(message)
-    
+
 # This should be registered AFTER all other command handlers
 bot.message_handler(func=lambda message: message.text is not None)(auto_moderate)
 
