@@ -1,5 +1,7 @@
 import os
 import logging
+import threading
+import flask
 import telebot
 import memory  # Import memory first to initialize database
 from ai_response import process_ai_response
@@ -24,6 +26,16 @@ logging.basicConfig(
     level=logging.INFO, 
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
+
+# --- Web server for Glitch keep-alive ---
+app = flask.Flask(__name__)
+
+@app.route('/')
+def index():
+    return "Zuzu Bot is alive 💅"
+
+def run_flask():
+    app.run(host="0.0.0.0", port=3000)
 
 # --- Basic Commands ---
 @bot.message_handler(commands=['start'])
@@ -80,10 +92,9 @@ def help_message(message):
             "/logs - Fetch the last 10 logs\n"
         )
     bot.reply_to(message, help_text, parse_mode="HTML")
-    
+
 # ---- Fun handler ----
 register_fun_handlers(bot)
-# ----- Fortune handler -----
 bot.message_handler(commands=['fortune'])(fortune)
 
 # --- Register Other Handlers ---
@@ -92,19 +103,24 @@ fetch_existing_groups()
 register_owner_commands(bot)
 bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
 bot.message_handler(commands=['mute', 'unmute', 'warn', 'ban'])(moderation_commands)
+
+# --- Image Generation ---
 @bot.message_handler(commands=["imagine"])
 def handle_imagine(message):
     image_gen.imagine(bot, message)
+
 # --- AI Response Handler ---
 @bot.message_handler(func=lambda message: message.text is not None)
 def handle_text(message):  
     process_ai_response(message)
 
-# This should be registered AFTER all other command handlers
-bot.message_handler(func=lambda message: message.text is not None)(auto_moderate)
+# --- Auto-Moderation Handler ---
+@bot.message_handler(func=lambda message: message.text is not None)
+def catch_everything(message):  
+    auto_moderate(message)
 
-
-# --- Start the Bot ---
+# --- Start Everything ---
 if __name__ == "__main__":
     logging.info("Bot is starting...")
+    threading.Thread(target=run_flask).start()
     bot.infinity_polling()
