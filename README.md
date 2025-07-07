@@ -23,11 +23,19 @@
 - **Send messages to all groups** the bot is in.  
 - **Owner-only commands** for full control.  
 
+### 🖼️ **AI Image Generation**
+- Use `/imagine <prompt>` to generate images from text using **Stable Horde**.
+- No API key needed—uses anonymous access.
+- **NSFW supported** (use responsibly).
+- Deletes "working..." message after image is sent for a clean UX.
+- Powered by distributed, open-source compute.
+
 ### 🎲 **Fun & Extra Commands**
 - `/roast` - Get a spicy burn 🔥  
 - `/motivate` - Get an uplifting quote 💪  
 - `/fortune` - Ask for a random prediction 🔮  
 - `/tea` - Get the latest gossip ☕  
+- `/imagine` - Generate an image from your prompt 🎨  
 
 ---
 
@@ -69,6 +77,7 @@ bash run.sh
 |----------|------------|
 | `/roast` | Get a savage roast 🔥 |
 | `/motivate` | Get a motivational quote 💪 |
+| `/imagine` | Generate an AI image from text prompt 🎨 |
 
 ### 🔧 Admin Commands
 | Command | Description |
@@ -97,10 +106,10 @@ bash run.sh
 - Configure note storage in **notes.py**.
 ---
 
-### **🎯 Contributing **
+### **🎯 Contributing**
 💖 Want to improve the bot? Fork the repo, submit pull requests, or report issues.
 
-🔗 **GitHub**: [Mod-Queen-Bot](https://github.com/Badmaneers/Mod-Queen-Bot)
+🔗 **GitHub**: [ZUZU-Bot](https://github.com/Badmaneers/ZUZU-Bot)
 
 ---
 

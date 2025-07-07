@@ -8,6 +8,7 @@ from moderations import greet_new_member, moderation_commands, auto_moderate
 from fun import register_fun_handlers
 from owner import register_owner_commands, fetch_existing_groups
 import notes
+import image_gen
 
 # Load environment variables
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -56,7 +57,8 @@ def help_message(message):
         "/motivate - Get a pep talk! 💪\n"
         "/tea - Spill some gossip 😉\n"
         "/rules - See the group rules 📜\n"
-        "/fortune - Talk to my fortune teller side! 🥠\n\n"
+        "/fortune - Talk to my fortune teller side! 🥠\n"
+        "/imagine - Generate an AI image from your prompt 🎨\n\n"
         "<b>🔨 Moderation Commands:</b>\n"
         "/warn - To warn users 👹\n"
         "/ban - Remove someone from the group 💥\n"
@@ -90,6 +92,9 @@ fetch_existing_groups()
 register_owner_commands(bot)
 bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
 bot.message_handler(commands=['mute', 'unmute', 'warn', 'ban'])(moderation_commands)
+@bot.message_handler(commands=["imagine"])
+def handle_imagine(message):
+    image_gen.imagine(bot, message)
 # --- AI Response Handler ---
 @bot.message_handler(func=lambda message: message.text is not None)
 def handle_text(message):  
