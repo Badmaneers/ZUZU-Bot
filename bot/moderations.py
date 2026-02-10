@@ -1,28 +1,48 @@
 import telebot
 import random
-from collections import defaultdict
 import time
-import memory
+import json
+import os
 import threading
 from datetime import datetime, timedelta
 from helper import load_from_file
 from bot_instance import bot
 from config import BADWORDS_FILE
 
-muted_users = {}  # Store muted users with their unmute time
-user_messages = defaultdict(int)
-message_timestamps = defaultdict(float)
-user_warnings = defaultdict(int)
-# Load badwords list
+muted_users = {}
+user_messages = {}
+message_timestamps = {}
+user_warnings = {}
+
+# Load badwords
 badwords = load_from_file(BADWORDS_FILE)
 
+# Configuration for Welcome/Moderation settings
+MOD_CONFIG_FILE = "moderation_config.json"
+
+def load_mod_config():
+    if not os.path.exists(MOD_CONFIG_FILE):
+        return {}
+    try:
+        with open(MOD_CONFIG_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_mod_config(config):
+    with open(MOD_CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=4)
+
 def is_admin(chat_id, user_id):
-    """Check if the user is an admin in the group."""
-    chat_admins = bot.get_chat_administrators(chat_id)
-    return any(admin.user.id == user_id for admin in chat_admins)
+    """Check if a user is an admin."""
+    try:
+        chat_admins = bot.get_chat_administrators(chat_id)
+        return any(admin.user.id == user_id for admin in chat_admins)
+    except Exception:
+        return False
 
 def bot_is_admin(chat_id):
-    """Check if the bot itself is an admin in a group chat."""
+    """Check if the bot is admin."""
     try:
         if chat_id > 0: # User ID (DMs)
             return False
@@ -30,133 +50,271 @@ def bot_is_admin(chat_id):
         bot_id = bot.get_me().id
         chat_admins = bot.get_chat_administrators(chat_id)
         return any(admin.user.id == bot_id for admin in chat_admins)
-    except telebot.apihelper.ApiTelegramException as e:
-        if "no administrators in the private chat" in str(e):
-            return False  # Private chats have no admins, so return False safely
-        raise  # Re-raise any other exceptions
+    except Exception:
+        return False
 
-# Auto-Greeting New Users
-def greet_new_member(message):
-    if not bot_is_admin(message.chat.id):
-        return
+def check_perm(message):
+    """Checks if command user is admin."""
+    if message.chat.type == "private":
+        return True
+    return is_admin(message.chat.id, message.from_user.id)
+
+def register_moderation_handlers(bot):
     
-    new_user = message.new_chat_members[0]
-
-    welcome_messages = [
-        f"🎉 Hey {new_user.first_name}, welcome to the jungle! Hope you can keep up. 😏",
-        f"🔥 {new_user.first_name} just walked in! Let’s see if they can survive my sass. 💅",
-        f"👀 Oh snap, {new_user.first_name} is here! Play nice, or I’ll roast you. 😈"
-    ]
-    bot.send_message(message.chat.id, random.choice(welcome_messages))
-
-# Muting, Unmuting, and Banning
-def moderation_commands(message):
-    chat_id = message.chat.id
-
-    user_id = message.from_user.id
-
-    if not bot_is_admin(chat_id):
-        return
-
-    if not is_admin(chat_id, user_id):
-        bot.reply_to(message, "🚫 Only admins can use this command!")
-        return
-
-    if not message.reply_to_message or not message.reply_to_message.from_user:
-        bot.reply_to(message, "⚠️ Reply to a valid user to take action!")
-        return
-
-    target_id = message.reply_to_message.from_user.id
-
-    if is_admin(chat_id, target_id):
-        bot.reply_to(message, "🚫 You cannot take action against an admin!")
-        return
-
-    if message.text.startswith("/mute"):
-        mute_duration = 300  # Default: 5 minutes
+    # --- Welcome Handling ---
+    @bot.message_handler(content_types=['new_chat_members'])
+    def greet_new_member(message):
+        chat_id = str(message.chat.id)
         try:
-            command_parts = message.text.split()
-            if len(command_parts) > 1:
-                mute_duration = int(command_parts[1]) * 60
-        except ValueError:
-            bot.reply_to(message, "⚠️ Invalid time format! Use `/mute [minutes]`")
+             # Skip if bot not admin or can't write (optional check, but good for logs)
+             pass 
+        except:
             return
 
-        muted_until = datetime.now() + timedelta(seconds=mute_duration)
-        muted_users[target_id] = muted_until
+        conf = load_mod_config()
+        chat_conf = conf.get(chat_id, {})
+        
+        # Check if welcome is disabled
+        if not chat_conf.get("welcome_enabled", True):
+            return
 
-        bot.restrict_chat_member(chat_id, target_id, until_date=muted_until.timestamp(), can_send_messages=False)
-        bot.reply_to(message, f"🔇 User {message.reply_to_message.from_user.first_name} has been muted for {mute_duration // 60} minutes!")
+        new_members = message.new_chat_members
+        custom_text = chat_conf.get("welcome_text")
 
-    elif message.text.startswith("/unmute"):
-        if target_id in muted_users:
-            del muted_users[target_id]
-        bot.restrict_chat_member(chat_id, target_id, can_send_messages=True)
-        bot.reply_to(message, f"🔊 User {message.reply_to_message.from_user.first_name} has been unmuted!")
+        for user in new_members:
+            if user.id == bot.get_me().id:
+                bot.reply_to(message, "💅 The queen has arrived. Make way!")
+                continue
 
-    elif message.text.startswith("/warn"):
-        user_warnings[target_id] += 1
-        if user_warnings[target_id] >= 3:
-            mute_duration = random.randint(60, 86400)
-            muted_until = datetime.now() + timedelta(seconds=mute_duration)
-            muted_users[target_id] = muted_until
+            name = user.first_name
+            username = f"@{user.username}" if user.username else name
+            
+            if custom_text:
+                # Rose-like placeholders: {name}, {username}, {chatname}
+                welcome_msg = custom_text.format(
+                    name=name,
+                    username=username,
+                    chatname=message.chat.title,
+                    id=user.id
+                )
+            else:
+                defaults = [
+                    f"🎉 Hey {name}, welcome to the jungle!",
+                    f"🔥 {name} just joined. Play nice!",
+                    f"👀 {name} is here. Don't be shy."
+                ]
+                welcome_msg = random.choice(defaults)
 
-            bot.restrict_chat_member(chat_id, target_id, until_date=muted_until.timestamp(), can_send_messages=False)
-            bot.send_message(chat_id, f"🤐 User {message.reply_to_message.from_user.first_name} has been muted for {mute_duration // 60} minutes due to repeated warnings.")
-        else:
-            bot.send_message(chat_id, f"⚠️ Warning {user_warnings[target_id]}/3 - Stop spamming!")
+            try:
+                bot.send_message(message.chat.id, welcome_msg)
+            except Exception as e:
+                print(f"Failed to send welcome: {e}")
 
-    elif message.text.startswith("/ban"):
-        bot.ban_chat_member(chat_id, target_id)
-        bot.reply_to(message, "🚨 User has been banned!")
+    # --- Configuration Commands ---
+    @bot.message_handler(commands=['welcome'])
+    def toggle_welcome(message):
+        if not check_perm(message):
+            bot.reply_to(message, "🚫 Admins only.")
+            return
 
-# Auto-moderation
+        args = message.text.split()
+        if len(args) < 2:
+            bot.reply_to(message, "⚠️ Usage: `/welcome <on/off>`")
+            return
+            
+        state = args[1].lower()
+        enable = state == "on"
+        
+        conf = load_mod_config()
+        chat_id = str(message.chat.id)
+        if chat_id not in conf: conf[chat_id] = {}
+        
+        conf[chat_id]["welcome_enabled"] = enable
+        save_mod_config(conf)
+        
+        bot.reply_to(message, f"✅ Welcome messages {'enabled' if enable else 'disabled'}.")
+
+    @bot.message_handler(commands=['setwelcome'])
+    def set_welcome(message):
+        if not check_perm(message):
+            bot.reply_to(message, "🚫 Admins only.")
+            return
+
+        text = message.text.replace("/setwelcome", "", 1).strip()
+        if not text:
+            bot.reply_to(message, "⚠️ Usage: `/setwelcome <message>`\nVariables: `{name}`, `{username}`, `{chatname}`, `{id}`")
+            return
+            
+        conf = load_mod_config()
+        chat_id = str(message.chat.id)
+        if chat_id not in conf: conf[chat_id] = {}
+        
+        conf[chat_id]["welcome_text"] = text
+        save_mod_config(conf)
+        
+        bot.reply_to(message, "✅ Custom welcome message saved!")
+
+    # --- Moderation Actions ---
+    @bot.message_handler(commands=['kick'])
+    def kick_user(message):
+        if not check_perm(message):
+            bot.reply_to(message, "🚫 Admins only.")
+            return
+        
+        if not message.reply_to_message:
+            bot.reply_to(message, "⚠️ Reply to someone to kick them.")
+            return
+            
+        target = message.reply_to_message.from_user
+        if is_admin(message.chat.id, target.id):
+             bot.reply_to(message, "🚫 I can't kick an admin.")
+             return
+             
+        try:
+            bot.unban_chat_member(message.chat.id, target.id) # Unban immediately kicks without perma-ban
+            bot.reply_to(message, f"👢 {target.first_name} has been kicked.")
+        except Exception as e:
+            bot.reply_to(message, f"❌ Failed: {e}")
+
+    @bot.message_handler(commands=['ban'])
+    def ban_user(message):
+        if not check_perm(message):
+            bot.reply_to(message, "🚫 Admins only.")
+            return
+            
+        if not message.reply_to_message:
+            bot.reply_to(message, "⚠️ Reply to someone to ban them.")
+            return
+
+        target = message.reply_to_message.from_user
+        if is_admin(message.chat.id, target.id):
+             bot.reply_to(message, "🚫 I can't ban an admin.")
+             return
+             
+        try:
+            bot.ban_chat_member(message.chat.id, target.id)
+            bot.reply_to(message, f"⛔ {target.first_name} banned.")
+        except Exception as e:
+            bot.reply_to(message, f"❌ Failed: {e}")
+
+    @bot.message_handler(commands=['mute'])
+    def mute_user(message):
+        if not check_perm(message):
+            return # Silent fail if not admin or reply?
+        
+        if not message.reply_to_message:
+            bot.reply_to(message, "⚠️ Reply to user.")
+            return
+            
+        target = message.reply_to_message.from_user
+        if is_admin(message.chat.id, target.id):
+            bot.reply_to(message, "🚫 Can't mute admins.")
+            return
+            
+        duration = 300 # 5 min default
+        args = message.text.split()
+        if len(args) > 1 and args[1].isdigit():
+            duration = int(args[1]) * 60
+            
+        try:
+            bot.restrict_chat_member(message.chat.id, target.id, until_date=time.time()+duration, can_send_messages=False)
+            bot.reply_to(message, f"🤐 {target.first_name} muted for {duration//60} mins.")
+        except Exception as e:
+            bot.reply_to(message, f"❌ Failed: {e}")
+
+    @bot.message_handler(commands=['unmute'])
+    def unmute_user(message):
+        if not check_perm(message): return
+        
+        if not message.reply_to_message:
+            bot.reply_to(message, "⚠️ Reply to user.")
+            return
+            
+        target = message.reply_to_message.from_user
+        try:
+            bot.restrict_chat_member(message.chat.id, target.id, can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True)
+            bot.reply_to(message, f"🗣️ {target.first_name} unmuted.")
+        except Exception as e:
+            bot.reply_to(message, f"❌ Failed: {e}")
+
+    @bot.message_handler(commands=['purge'])
+    def purge_messages(message):
+        if not check_perm(message):
+            bot.reply_to(message, "🚫 Admins only.")
+            return
+            
+        try:
+            args = message.text.split()
+            count = int(args[1]) if len(args) > 1 else 10
+            if count > 100: count = 100 # Safe limit
+            
+            message_ids = [k for k in range(message.message_id - count, message.message_id + 1)]
+            # Needs delete_messages (plural) or loop
+            # Telebot might not support plural delete easily in older versions, loop is safer
+            for mid in message_ids:
+                try:
+                    bot.delete_message(message.chat.id, mid)
+                except:
+                    pass
+            
+            confirm = bot.send_message(message.chat.id, f"🗑️ Purged {count} messages.")
+            time.sleep(3)
+            bot.delete_message(message.chat.id, confirm.message_id)
+        except Exception as e:
+             bot.reply_to(message, f"❌ Error: {e}")
+
+    @bot.message_handler(commands=['pin'])
+    def pin_message(message):
+        if not check_perm(message): return
+        
+        if not message.reply_to_message:
+            bot.reply_to(message, "⚠️ Reply to a message to pin it.")
+            return
+            
+        try:
+            bot.pin_chat_message(message.chat.id, message.reply_to_message.message_id)
+            bot.reply_to(message, "📌 Pinned.")
+        except Exception as e:
+             bot.reply_to(message, f"❌ Failed: {e}")
+
+# Auto-moderation (Logic Refined)
 def auto_moderate(message):
     chat_id = message.chat.id
     user_id = str(message.from_user.id)
-    if not bot_is_admin(chat_id):
-        return False
-
-    # Anti-spam detection
-    current_time = time.time()
-    if current_time - message_timestamps[user_id] < 1:
-        try:
-            bot.delete_message(chat_id, message.message_id)
-            bot.send_message(chat_id, f"⚠️ {message.from_user.first_name}, stop spamming!")
-        except Exception:
-            pass
-        return True
-
-    message_timestamps[user_id] = current_time
-    user_messages[user_id] += 1
-
-    # Bad word filtering
-    if any(badword in message.text.lower() for badword in badwords):
-        try:
-            bot.delete_message(chat_id, message.message_id)
-            bot.send_message(chat_id, f"Uh-oh, watch your language {message.from_user.first_name}!")
-        except Exception:
-            pass
-        return True
     
+    # Skip for admins or private chats
+    if message.chat.type == "private": return False
+    # To check admin status efficiently, we might cache or skip strict check for every message
+    # For now, let's just check timestamps first (super fast)
+    
+    now = time.time()
+    last_time = message_timestamps.get(user_id, 0)
+    
+    # 1. Spam Filter (Simple: < 0.7s between messages)
+    if now - last_time < 0.7:
+        if not is_admin(chat_id, int(user_id)):
+            try:
+                bot.delete_message(chat_id, message.message_id)
+                # Don't warn every time, just delete
+                return True
+            except:
+                pass
+    
+    message_timestamps[user_id] = now
+    
+    # 2. Bad Words
+    if not message.text: return False
+    
+    text_lower = message.text.lower()
+    if any(w in text_lower for w in badwords):
+        if not is_admin(chat_id, int(user_id)):
+            try:
+                bot.delete_message(chat_id, message.message_id)
+                bot.send_message(chat_id, f"🚫 Watch your language, {message.from_user.first_name}!")
+                return True
+            except:
+                pass
+                
     return False
 
-
-def check_unmute():
-    while True:
-        now = datetime.now()
-        to_unmute = [user_id for user_id, unmute_time in muted_users.items() if now >= unmute_time]
-
-        for user_id in to_unmute:
-            for chat_id in list(muted_users.keys()):
-                try:
-                    if bot_is_admin(chat_id):
-                        bot.restrict_chat_member(chat_id, user_id, can_send_messages=True)
-                        bot.send_message(chat_id, f"🔊 User {bot.get_chat_member(chat_id, user_id).user.first_name} has been auto-unmuted!")
-                        del muted_users[user_id]
-                except Exception as e:
-                    print(f"Error unmuting user {user_id} in chat {chat_id}: {e}")
-
-        time.sleep(60)
-
-threading.Thread(target=check_unmute, daemon=True).start()
+print("✅ Moderation handlers registered.")
