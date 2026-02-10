@@ -8,7 +8,7 @@ from ai_response import process_ai_response
 import time
 import random
 from moderations import is_admin
-from notes import load_notes, save_notes
+from notes import load_notes, save_notes_to_file
 from config import BASE_DIR, OWNER_ID
 from bot_instance import bot
 
