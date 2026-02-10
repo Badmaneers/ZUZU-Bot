@@ -9,12 +9,8 @@ import time
 import random
 from modules.moderations import is_admin
 from modules.notes import load_notes, save_notes_to_file
-from config import BASE_DIR, OWNER_ID
+from config import BASE_DIR, OWNER_ID, GROUPS_FILE, NOTES_DIR
 from core.bot_instance import bot
-
-# Define paths
-GROUPS_FILE = os.path.join(os.path.dirname(BASE_DIR), "bot", "groups.txt")
-NOTES_DIR = os.path.join(os.path.dirname(BASE_DIR), "notes")
 
 # Ensure groups.txt exists
 if not os.path.exists(GROUPS_FILE):

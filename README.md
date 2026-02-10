@@ -7,10 +7,11 @@
 ### 🤖 **AI-Powered Chat**
 - **Sassy, confident, and playful responses** powered by AI.  
 - **Remembers past conversations** for a more natural flow.  
-- **Can roast, motivate, and chat like a human.**  
+- **Smart Roasts & Motivations** generated dynamically by AI.  
 
 ### 🔧 **Advanced Group Moderation**
-- **Auto-moderation** to prevent spam, bad words, and excessive messages.  
+- **Auto-moderation** to prevent spam and excessive messages.  
+- **Group-Specific Bad Words**: Admins can configure unique blocklists for their groups.
 - **Mute & unmute users** for a set time instead of banning.  
 - **Welcome new members** with a personalized message.  
 
@@ -82,14 +83,21 @@ bash run.sh
 ### 🔧 Admin Commands
 | Command | Description |
 |---------|------------|
-| `/mute @user or reply <time>` | Mute a user for a set time |
+| `/mute @user or reply <time>` | Mute a user for a set time (default 5m) |
 | `/unmute @user or reply` | Unmute a user |
 | `/ban @user or reply` | Ban a user |
+| `/kick @user or reply` | Kick a user (they can rejoin) |
+| `/pin` | Pin the replied message |
+| `/purge <num>` | Delete last <num> messages |
+| `/welcome <on/off>` | Toggle welcome messages |
+| `/setwelcome <msg>` | Set custom welcome message |
+| `/addbw <word>` | Add word to group's black list |
+| `/rmbw <word>` | Remove word from group's black list |
 | `/notes` | To list all notes 🗒️ |
 | `/note <note name> ` | To get a note |
 | `/save` | Save notes 📝 |
 | `/delnote` | Delete a note |
-| `/toggle_notes` | To enable/disable notes in a group |
+| `/toggle_notes` | Enable/Disable notes in a group |
 
 
 ### 📢 Owner Commands
@@ -100,10 +108,16 @@ bash run.sh
 | `/logs` | Fetch the last 10 logs |
 | `/register` | To manually register the group id |
 
+### **📂 Project Structure**
+- `bot/core/`: Essential bot logic (AI, Memory, Helper).
+- `bot/modules/`: Feature plugins (Fun, Moderation, Notes, etc).
+- `data/`: Static assets (AI prompt, default badwords, config).
+- `state/`: Dynamic data (databases, group configs).
+
 ### **🚀 Customization**
-- Modify **prompt.txt** to change AI personality.
-- Edit moderation settings in **moderations.py**.
-- Configure note storage in **notes.py**.
+- **AI Personality**: Edit `data/prompt.txt`.
+- **Global Badwords**: Edit `data/badwords.txt`.
+- **Bot Config**: Edit `bot/config.py`.
 ---
 
 ### **🎯 Contributing**

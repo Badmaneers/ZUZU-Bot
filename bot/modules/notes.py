@@ -3,8 +3,7 @@ import json
 import re
 from core.bot_instance import bot
 from modules.moderations import is_admin
-
-NOTES_DIR = "notes"
+from config import NOTES_DIR
 
 if not os.path.exists(NOTES_DIR):
     os.makedirs(NOTES_DIR)
