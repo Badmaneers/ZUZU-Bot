@@ -14,8 +14,8 @@ user_messages = {}
 message_timestamps = {}
 user_warnings = {}
 
-# Load badwords
-badwords = load_from_file(BADWORDS_FILE)
+# Load global badwords (defaults)
+global_badwords = load_from_file(BADWORDS_FILE)
 
 # Configuration for Welcome/Moderation settings
 MOD_CONFIG_FILE = "moderation_config.json"
@@ -32,6 +32,13 @@ def load_mod_config():
 def save_mod_config(config):
     with open(MOD_CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=4)
+
+def get_effective_badwords(chat_id):
+    conf = load_mod_config()
+    chat_conf = conf.get(str(chat_id), {})
+    if "badwords" in chat_conf:
+        return chat_conf["badwords"]
+    return global_badwords
 
 def is_admin(chat_id, user_id):
     """Check if a user is an admin."""
@@ -276,6 +283,62 @@ def register_moderation_handlers(bot):
             bot.reply_to(message, "📌 Pinned.")
         except Exception as e:
              bot.reply_to(message, f"❌ Failed: {e}")
+             
+    @bot.message_handler(commands=['addbw', 'filter'])
+    def add_badword_command(message):
+        if not check_perm(message):
+            bot.reply_to(message, "🚫 Admins only.")
+            return
+
+        chat_id = str(message.chat.id)
+        args = message.text.split(None, 1)
+        if len(args) < 2:
+            bot.reply_to(message, "⚠️ Usage: `/addbw <word>`")
+            return
+
+        word = args[1].lower().strip()
+        conf = load_mod_config()
+        if chat_id not in conf: conf[chat_id] = {}
+        
+        # Initialize with global if first time
+        if "badwords" not in conf[chat_id]:
+            conf[chat_id]["badwords"] = global_badwords.copy()
+            
+        if word in conf[chat_id]["badwords"]:
+            bot.reply_to(message, "⚠️ Word already in filter list.")
+            return
+
+        conf[chat_id]["badwords"].append(word)
+        save_mod_config(conf)
+        bot.reply_to(message, f"✅ `{word}` added to this group's bad words list.", parse_mode="Markdown")
+
+    @bot.message_handler(commands=['rmbw', 'unfilter'])
+    def remove_badword_command(message):
+        if not check_perm(message):
+            bot.reply_to(message, "🚫 Admins only.")
+            return
+
+        chat_id = str(message.chat.id)
+        args = message.text.split(None, 1)
+        if len(args) < 2:
+            bot.reply_to(message, "⚠️ Usage: `/rmbw <word>`")
+            return
+
+        word = args[1].lower().strip()
+        conf = load_mod_config()
+        if chat_id not in conf: conf[chat_id] = {}
+        
+        # Materialize list if needed so we can remove from defaults
+        if "badwords" not in conf[chat_id]:
+            conf[chat_id]["badwords"] = global_badwords.copy()
+
+        if word not in conf[chat_id]["badwords"]:
+            bot.reply_to(message, "⚠️ Word not in filter list.")
+            return
+
+        conf[chat_id]["badwords"].remove(word)
+        save_mod_config(conf)
+        bot.reply_to(message, f"✅ `{word}` removed from this group's bad words list.", parse_mode="Markdown")
 
 # Auto-moderation (Logic Refined)
 def auto_moderate(message):
@@ -284,8 +347,6 @@ def auto_moderate(message):
     
     # Skip for admins or private chats
     if message.chat.type == "private": return False
-    # To check admin status efficiently, we might cache or skip strict check for every message
-    # For now, let's just check timestamps first (super fast)
     
     now = time.time()
     last_time = message_timestamps.get(user_id, 0)
@@ -302,11 +363,14 @@ def auto_moderate(message):
     
     message_timestamps[user_id] = now
     
-    # 2. Bad Words
+    # 2. Bad Words (Group Specific)
     if not message.text: return False
     
+    current_badwords = get_effective_badwords(chat_id)
     text_lower = message.text.lower()
-    if any(w in text_lower for w in badwords):
+    
+    # Check whole words better? For now simple inclusion
+    if any(w in text_lower for w in current_badwords):
         if not is_admin(chat_id, int(user_id)):
             try:
                 bot.delete_message(chat_id, message.message_id)
