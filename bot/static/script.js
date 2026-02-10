@@ -308,3 +308,10 @@ async function forceCommitMemory() {
         alert("Request failed: " + e);
     }
 }
+
+async function refreshMemory() {
+    await loadMemoryList();
+    if (currentMemoryKey) {
+        await loadMemoryChat(currentMemoryKey);
+    }
+}

@@ -131,7 +131,10 @@
             <div id="tab-memory" class="tab-content">
                 <div class="header-row">
                     <h1>Encrypted Memory Viewer</h1>
-                    <button onclick="forceCommitMemory()" class="btn-save" style="background:var(--accent);"><i class="fa-solid fa-cloud-upload"></i> Force Persistence</button>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button onclick="refreshMemory()" class="btn-save" style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.1);"><i class="fa-solid fa-sync"></i> Refresh</button>
+                        <button onclick="forceCommitMemory()" class="btn-save" style="background:var(--accent);"><i class="fa-solid fa-cloud-upload"></i> Force Persistence</button>
+                    </div>
                 </div>
 
                 <!-- Auth State -->
