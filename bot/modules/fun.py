@@ -86,7 +86,8 @@ def register_fun_handlers(bot):
         else:
             mention = f'<a href="tg://user?id={target.id}">{target_name}</a>'
             
-        bot.send_message(chat_id, f"{mention}, {text}", parse_mode="HTML")
+        message_thread_id = message.message_thread_id if message.chat.is_forum and hasattr(message, 'message_thread_id') else None
+        bot.send_message(chat_id, f"{mention}, {text}", parse_mode="HTML", message_thread_id=message_thread_id)
 
         # Save to memory
         try:
@@ -134,7 +135,8 @@ def register_fun_handlers(bot):
         else:
             mention = f'<a href="tg://user?id={target.id}">{target_name}</a>'
 
-        bot.send_message(chat_id, f"{mention}, {text}", parse_mode="HTML")
+        message_thread_id = message.message_thread_id if message.chat.is_forum and hasattr(message, 'message_thread_id') else None
+        bot.send_message(chat_id, f"{mention}, {text}", parse_mode="HTML", message_thread_id=message_thread_id)
 
         # Save to memory
         try:

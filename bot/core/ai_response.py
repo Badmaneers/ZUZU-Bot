@@ -69,8 +69,12 @@ def get_ai_reply(system_msg, user_msg, max_tokens=150):
 # ========== AI Response Handling ==========
 def process_ai_response(message, group_id=None, message_text=None):
     # Remove @mention from text if present
-    clean_text = message.text.strip() if message.text else ""
+    clean_text = ""
+    if message and hasattr(message, 'text') and message.text:
+        clean_text = message.text.strip()
     
+    message_thread_id = None
+
     # Handle scheduled messages sent to groups
     if group_id is not None and message_text is not None:
         chat_id = group_id
@@ -85,6 +89,7 @@ def process_ai_response(message, group_id=None, message_text=None):
         user_name = message.from_user.first_name
         chat_type = message.chat.type
         is_private = chat_type == "private"
+        message_thread_id = message.message_thread_id if hasattr(message, 'message_thread_id') and message.chat.is_forum else None
 
     # Define wake words
     wake_words = ["zuzu", "zuzu-bot", "bot", "assistant"]
@@ -148,6 +153,7 @@ def process_ai_response(message, group_id=None, message_text=None):
                     bot.send_message(
                         chat_id,
                         ai_reply,
+                        message_thread_id=message_thread_id,
                         reply_to_message_id=message.message_id if hasattr(message, 'message_id') and not is_private else None
                     )
 

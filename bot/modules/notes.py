@@ -44,11 +44,11 @@ def check_perm(message):
 
 def register_notes_handlers(bot):
 
-    def send_note(chat_id, note_data, reply_to=None):
+    def send_note(chat_id, note_data, reply_to=None, message_thread_id=None):
         """Helper to send a note based on its type"""
         if isinstance(note_data, str):
             # Legacy string format support
-            bot.send_message(chat_id, note_data, parse_mode="Markdown", reply_to_message_id=reply_to)
+            bot.send_message(chat_id, note_data, parse_mode="Markdown", reply_to_message_id=reply_to, message_thread_id=message_thread_id)
             return
 
         msg_type = note_data.get("type", "text")
@@ -57,25 +57,25 @@ def register_notes_handlers(bot):
 
         try:
             if msg_type == "text":
-                bot.send_message(chat_id, content, parse_mode="Markdown", reply_to_message_id=reply_to)
+                bot.send_message(chat_id, content, parse_mode="Markdown", reply_to_message_id=reply_to, message_thread_id=message_thread_id)
             elif msg_type == "photo":
-                bot.send_photo(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to)
+                bot.send_photo(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to, message_thread_id=message_thread_id)
             elif msg_type == "video":
-                bot.send_video(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to)
+                bot.send_video(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to, message_thread_id=message_thread_id)
             elif msg_type == "document":
-                bot.send_document(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to)
+                bot.send_document(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to, message_thread_id=message_thread_id)
             elif msg_type == "sticker":
-                bot.send_sticker(chat_id, file_id, reply_to_message_id=reply_to)
+                bot.send_sticker(chat_id, file_id, reply_to_message_id=reply_to, message_thread_id=message_thread_id)
             elif msg_type == "animation":
-                bot.send_animation(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to)
+                bot.send_animation(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to, message_thread_id=message_thread_id)
             elif msg_type == "audio":
-                bot.send_audio(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to)
+                bot.send_audio(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to, message_thread_id=message_thread_id)
             elif msg_type == "voice":
-                bot.send_voice(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to)
+                bot.send_voice(chat_id, file_id, caption=content, parse_mode="Markdown", reply_to_message_id=reply_to, message_thread_id=message_thread_id)
             else:
-                 bot.send_message(chat_id, "⚠️ Content type not fully supported yet.", reply_to_message_id=reply_to)
+                 bot.send_message(chat_id, "⚠️ Content type not fully supported yet.", reply_to_message_id=reply_to, message_thread_id=message_thread_id)
         except Exception as e:
-            bot.send_message(chat_id, f"⚠️ Failed to send note: {e}", reply_to_message_id=reply_to)
+            bot.send_message(chat_id, f"⚠️ Failed to send note: {e}", reply_to_message_id=reply_to, message_thread_id=message_thread_id)
     
     @bot.message_handler(commands=['toggle_notes'])
     def toggle_notes(message):
@@ -188,7 +188,8 @@ def register_notes_handlers(bot):
         title = parts[1].strip().lower()
 
         if title in data["notes"]:
-            send_note(chat_id, data["notes"][title], reply_to=message.message_id)
+            message_thread_id = message.message_thread_id if message.chat.is_forum and hasattr(message, 'message_thread_id') else None
+            send_note(chat_id, data["notes"][title], reply_to=message.message_id, message_thread_id=message_thread_id)
         else:
             bot.reply_to(message, "❌ Note not found!")
 
@@ -275,7 +276,8 @@ def register_notes_handlers(bot):
 
         if data["pinned"] and data["pinned"] in data["notes"]:
             title = data["pinned"]
-            send_note(chat_id, data["notes"][title], reply_to=message.message_id)
+            message_thread_id = message.message_thread_id if message.chat.is_forum and hasattr(message, 'message_thread_id') else None
+            send_note(chat_id, data["notes"][title], reply_to=message.message_id, message_thread_id=message_thread_id)
         else:
             bot.reply_to(message, "📭 No pinned note found.")
 
@@ -296,6 +298,7 @@ def register_notes_handlers(bot):
         title = match.group(1).lower()
         
         if title in data["notes"]:
-            send_note(chat_id, data["notes"][title], reply_to=message.message_id)
+            message_thread_id = message.message_thread_id if message.chat.is_forum and hasattr(message, 'message_thread_id') else None
+            send_note(chat_id, data["notes"][title], reply_to=message.message_id, message_thread_id=message_thread_id)
 
     print("✅ Notes handlers registered.")

@@ -35,7 +35,9 @@ def fortune(message):
                   {"role": "user", "content": question}]
     )
     answer = response.choices[0].message.content.strip()
-    bot.reply_to(message, f"🔮 {answer}")
+
+    message_thread_id = message.message_thread_id if message.chat.is_forum and hasattr(message, 'message_thread_id') else None
+    bot.send_message(message.chat.id, f"🔮 {answer}", reply_to_message_id=message.message_id, message_thread_id=message_thread_id)
 
     # Save to memory
     try:
