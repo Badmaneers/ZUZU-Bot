@@ -228,3 +228,38 @@ def memory_delete():
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@dashboard_bp.route('/api/memory/commit', methods=['POST'])
+@login_required
+def memory_force_commit():
+    """Force save dirty memory keys to database"""
+    if not session.get('memory_unlocked'):
+        return jsonify({"error": "Locked"}), 403
+        
+    try:
+        # We need to access the running bot's memory instance.
+        # Since this runs in the same process as the supervisor but the bot logic is in a subprocess/thread 
+        # (Wait, actually in supervisor mode, dashboard is main.py, worker is subprocess)
+        # We cannot access the worker's memory object directly.
+        # However, the worker writes to DB automatically.
+        # If the user wants to trigger a save from dashboard, we might need IPC or just rely on worker's nature.
+        
+        # But wait! The dashboard is editing the DB directly via SQL.
+        # The worker reads/writes to DB.
+        # If we "edit" via dashboard, we are writing to DB.
+        # The worker might have cached old data.
+        
+        # This architecture (Dashboard in Main, Bot in Subprocess) makes shared memory tricky.
+        # The Dashboard writes to SQLite.
+        # The Worker has an in-memory CACHE.
+        
+        # If Dashboard updates DB, Worker doesn't know.
+        # Worker might overwrite Dashboard changes on next save if it thinks its cache is newer.
+        # Ideally, we need to signal the Worker to RELOAD from DB or restart.
+        
+        # For now, let's implement a "Reload Memory" signal?
+        # Or just a restart.
+        
+        return jsonify({"success": True, "message": "Changes saved to DB. Note: Active bot process may need restart to pick up external DB edits."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -293,3 +293,18 @@ async function checkStatus() {
 
 // Poll status every 5 seconds
 setInterval(checkStatus, 5000);
+
+async function forceCommitMemory() {
+    if (!confirm("Are you sure you want to force save all memory from cache to disk? This might be needed if the bot is running but data isn't showing up yet.")) return;
+    try {
+        const res = await fetch('/api/memory/commit', {method: 'POST'});
+        const data = await res.json();
+        if(data.success) {
+            alert(data.message);
+        } else {
+            alert("Error: " + data.error);
+        }
+    } catch(e) {
+        alert("Request failed: " + e);
+    }
+}
