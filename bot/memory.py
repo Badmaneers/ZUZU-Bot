@@ -27,6 +27,10 @@ def init_db():
             DB_CONN = sqlite3.connect(DB_FILE, check_same_thread=False)
             cursor = DB_CONN.cursor()
             
+            # Enable WAL mode for better concurrency and reliability
+            cursor.execute("PRAGMA journal_mode=WAL;")
+            cursor.execute("PRAGMA synchronous=NORMAL;")
+            
             # Create memory table with context-aware structure
             cursor.execute('''
             CREATE TABLE IF NOT EXISTS chat_memory (
@@ -37,7 +41,7 @@ def init_db():
             ''')
             
             DB_CONN.commit()
-            logging.info("Database initialized successfully")
+            logging.info("Database initialized successfully with WAL mode")
         except Exception as e:
             logging.error(f"Database initialization error: {e}")
             raise e
@@ -45,127 +49,124 @@ def init_db():
 # Initialize database on module import
 init_db()
 
-# ========== Memory Operations ========== #
-def get_user_memory(memory_key):
-    """Get memory for a specific user+context"""
-    with DB_LOCK:
-        try:
-            cursor = DB_CONN.cursor()
-            cursor.execute("SELECT messages FROM chat_memory WHERE memory_key = ?", (memory_key,))
-            result = cursor.fetchone()
-            
-            if result:
-                return json.loads(result[0])
-            return []
-        except Exception as e:
-            logging.error(f"Error getting memory for key {memory_key}: {e}")
-            return []
-
-def save_user_memory(memory_key, messages):
-    """Save memory for a specific user+context"""
-    with DB_LOCK:
-        try:
-            cursor = DB_CONN.cursor()
-            cursor.execute(
-                "INSERT OR REPLACE INTO chat_memory (memory_key, messages, last_updated) VALUES (?, ?, CURRENT_TIMESTAMP)",
-                (memory_key, json.dumps(messages))
-            )
-            DB_CONN.commit()
-            return True
-        except Exception as e:
-            logging.error(f"Error saving memory for key {memory_key}: {e}")
-            DB_CONN.rollback()
-            return False
-
-def get_all_memory_keys():
-    """Get all memory keys in the database"""
-    with DB_LOCK:
-        try:
-            cursor = DB_CONN.cursor()
-            cursor.execute("SELECT memory_key FROM chat_memory")
-            return [row[0] for row in cursor.fetchall()]
-        except Exception as e:
-            logging.error(f"Error getting memory keys: {e}")
-            return []
-
 # ========== Memory Management Class ========== #
 class MemoryManager:
     def __init__(self):
         self.memory_cache = {}
+        self.dirty_keys = set()
+        self.cache_lock = threading.Lock()
         
+    def _get_key(self, key_info):
+        """Helper to resolve memory key from various input formats"""
+        if isinstance(key_info, tuple) and len(key_info) >= 2:
+            # New format: (user_id, chat_id, chat_type)
+            user_id, chat_id = key_info[0], key_info[1]
+            chat_type = key_info[2] if len(key_info) > 2 else "private"
+            
+            if chat_type != "private" and chat_id:
+                return f"group:{chat_id}"
+            else:
+                return f"{user_id}:dm"
+        elif isinstance(key_info, str):
+            # Already a key string? or old ID?
+            if ":" in key_info: return key_info
+            return f"{key_info}:dm"
+        return str(key_info)
+
     def get(self, user_id, chat_id=None, chat_type="private", default=None):
-        """Get memory with context awareness
-           - For private chats: user-specific memory
-           - For groups: shared group memory"""
+        """Get memory with context awareness"""
         if chat_type != "private" and chat_id:
-            # Group chats use shared memory: "group:{chat_id}"
             memory_key = f"group:{chat_id}"
         else:
-            # Private chats use user-specific memory: "{user_id}:dm"
             memory_key = f"{user_id}:dm"
             
-        if memory_key not in self.memory_cache:
-            self.memory_cache[memory_key] = get_user_memory(memory_key)
-        return self.memory_cache[memory_key] if self.memory_cache[memory_key] else default or []
+        with self.cache_lock:
+            if memory_key not in self.memory_cache:
+                # Load from DB if not in cache
+                try:
+                    with DB_LOCK:
+                        cursor = DB_CONN.cursor()
+                        cursor.execute("SELECT messages FROM chat_memory WHERE memory_key = ?", (memory_key,))
+                        result = cursor.fetchone()
+                        if result:
+                            self.memory_cache[memory_key] = json.loads(result[0])
+                        else:
+                            self.memory_cache[memory_key] = []
+                except Exception as e:
+                    logging.error(f"Error loading memory for {memory_key}: {e}")
+                    self.memory_cache[memory_key] = []
+                    
+            return self.memory_cache[memory_key]
     
-    def save(self, memory_key):
-        """Save a specific memory context"""
-        if memory_key in self.memory_cache:
-            return save_user_memory(memory_key, self.memory_cache[memory_key])
-        return False
-    
-    def save_all(self):
-        """Save all memories in the cache"""
-        success = True
-        for memory_key in list(self.memory_cache.keys()):
-            if not self.save(memory_key):
-                success = False
-        return success
+    def commit(self):
+        """Save only modified (dirty) memories to database in a single transaction"""
+        with self.cache_lock:
+            if not self.dirty_keys:
+                return True
+            
+            keys_to_save = list(self.dirty_keys)
+            self.dirty_keys.clear()
+
+        # Perform DB operations outside cache lock to minimize blocking
+        with DB_LOCK:
+            try:
+                cursor = DB_CONN.cursor()
+                cursor.execute("BEGIN TRANSACTION")
+                
+                for key in keys_to_save:
+                    # Check cache for data (acquire cache lock briefly)
+                    with self.cache_lock:
+                        messages = self.memory_cache.get(key)
+                    
+                    if messages is not None:
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO chat_memory (memory_key, messages, last_updated) VALUES (?, ?, CURRENT_TIMESTAMP)",
+                            (key, json.dumps(messages))
+                        )
+                
+                DB_CONN.commit()
+                # logging.info(f"Committed {len(keys_to_save)} modified memory contexts to database.")
+                return True
+            except Exception as e:
+                logging.error(f"Error verifying memory batch commit: {e}")
+                DB_CONN.rollback()
+                # Re-add keys to dirty set so we don't lose data
+                with self.cache_lock:
+                    self.dirty_keys.update(keys_to_save)
+                return False
     
     def __getitem__(self, key_info):
-        """Support for both old and new access methods"""
-        if isinstance(key_info, tuple) and len(key_info) >= 2:
-            # New format: (user_id, chat_id, chat_type)
-            user_id, chat_id = key_info[0], key_info[1]
-            chat_type = key_info[2] if len(key_info) > 2 else "private"
-            
-            # Create appropriate memory key
-            if chat_type != "private" and chat_id:
-                memory_key = f"group:{chat_id}"
-            else:
-                memory_key = f"{user_id}:dm"
-                
-            return self.memory_cache.get(memory_key, [])
-        else:
-            # Old format: just user_id (assume DMs)
-            memory_key = f"{key_info}:dm"
-            return self.memory_cache.get(memory_key, [])
+        """Support for legacy access"""
+        memory_key = self._get_key(key_info)
+        with self.cache_lock:
+            if memory_key not in self.memory_cache:
+                # Trigger a load via get logic manually or reuse
+                # Simple lazy load:
+                try:
+                    with DB_LOCK:
+                        cursor = DB_CONN.cursor()
+                        cursor.execute("SELECT messages FROM chat_memory WHERE memory_key = ?", (memory_key,))
+                        res = cursor.fetchone()
+                        self.memory_cache[memory_key] = json.loads(res[0]) if res else []
+                except:
+                   self.memory_cache[memory_key] = []
+                   
+            return self.memory_cache[memory_key]
     
     def __setitem__(self, key_info, messages):
-        """Support for both old and new access methods"""
-        if isinstance(key_info, tuple) and len(key_info) >= 2:
-            # New format: (user_id, chat_id, chat_type)
-            user_id, chat_id = key_info[0], key_info[1]
-            chat_type = key_info[2] if len(key_info) > 2 else "private"
-            
-            # Create appropriate memory key
-            if chat_type != "private" and chat_id:
-                memory_key = f"group:{chat_id}"
-            else:
-                memory_key = f"{user_id}:dm"
-        else:
-            # Old format: just user_id (assume DMs)
-            memory_key = f"{key_info}:dm"
-            
-        self.memory_cache[memory_key] = messages
+        """Update memory and mark as dirty"""
+        memory_key = self._get_key(key_info)
+        with self.cache_lock:
+            self.memory_cache[memory_key] = messages
+            self.dirty_keys.add(memory_key)
 
 # Create global memory manager instance
 chat_memory = MemoryManager()
 
 # Backward compatibility function
 def save_memory():
-    """Save all memory to database"""
-    return chat_memory.save_all()  # This was calling save_all() which didn't exist
+    """Trigger a commit of dirty memory keys"""
+    return chat_memory.commit()
 
 # ========== Migrate from old format ========== #
 def migrate_from_json():
@@ -179,15 +180,16 @@ def migrate_from_json():
                 
             if raw_data:
                 try:
-                    # Try to parse the old format
                     old_data = json.loads(raw_data)
-                    
-                    # Transfer to new database with context separation
+                    # Use the manager to insert and mark dirty
                     for user_id, messages in old_data.items():
-                        # Put old memories in both DM and group contexts for continuity
-                        save_user_memory(f"{user_id}:dm", messages)
+                        # We don't know if these are groups or DMs easily, 
+                        # but old bot mainly did DMs or everything mixed.
+                        # We'll save as DM for safety.
+                        chat_memory[f"{user_id}:dm"] = messages
                     
-                    # Rename the old file as backup
+                    chat_memory.commit()
+                    
                     os.rename(old_file, f"{old_file}.bak")
                     logging.info("Migration completed successfully")
                 except Exception as e:
@@ -195,24 +197,19 @@ def migrate_from_json():
         except Exception as e:
             logging.error(f"Failed to open old memory file: {e}")
 
-# Try to migrate on first run
 try:
     migrate_from_json()
 except Exception as e:
     logging.error(f"Migration error: {e}")
 
-# ========== Auto-Save Memory Every 60 Seconds ========== #
+# ========== Auto-Save Memory ========== #
 def auto_save_memory():
     while True:
         try:
-            success = save_memory()
-            if success:
-                logging.info("Auto-saved memory to database")
-            else:
-                logging.warning("Failed to auto-save memory")
+            chat_memory.commit()
         except Exception as e:
             logging.error(f"Error in auto-save: {e}")
-        time.sleep(60)  # Wait 60 seconds before saving again
+        time.sleep(60)
 
 # Start auto-save thread
 auto_save_thread = threading.Thread(target=auto_save_memory, daemon=True)
@@ -221,7 +218,7 @@ auto_save_thread.start()
 # ========== Cleanup ========== #
 def handle_exit(signal_number, frame):
     logging.info("Saving memory before exit...")
-    save_memory()
+    chat_memory.commit()
     if DB_CONN:
         DB_CONN.close()
     logging.info("Database connection closed")
@@ -230,4 +227,4 @@ def handle_exit(signal_number, frame):
 signal.signal(signal.SIGINT, handle_exit)
 signal.signal(signal.SIGTERM, handle_exit)
 
-logging.info("Memory system initialized with SQLite backend")
+logging.info("Memory system initialized with SQLite (WAL optimized)")
