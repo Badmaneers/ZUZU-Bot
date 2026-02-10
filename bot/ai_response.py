@@ -40,6 +40,32 @@ def load_prompt():
 system_prompt = load_prompt()
 
 
+# ========== Helper for specific requests ==========
+def get_ai_reply(system_msg, user_msg, max_tokens=150):
+    """
+    Generates a single AI response without memory context.
+    Useful for one-off commands like /roast or /motivate.
+    """
+    try:
+        messages = [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_msg}
+        ]
+        
+        response = client.chat.completions.create(
+            model=AI_MODEL,
+            messages=messages,
+            temperature=0.8, # Slightly creative
+            max_tokens=max_tokens
+        )
+        
+        if response.choices:
+            return response.choices[0].message.content.strip()
+    except Exception as e:
+        logging.error(f"Error in get_ai_reply: {e}")
+    
+    return None
+
 # ========== AI Response Handling ==========
 def process_ai_response(message, group_id=None, message_text=None):
     # Remove @mention from text if present
