@@ -1,5 +1,5 @@
 python-dotenv
 openai
-telebotflask
+pyTelegramBotAPI
 requests
 cryptography
