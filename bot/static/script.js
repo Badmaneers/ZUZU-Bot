@@ -89,3 +89,110 @@ async function saveFun() {
         alert('Invalid JSON! Please check your syntax.');
     }
 }
+
+// --- Memory Functions ---
+async function unlockMemory() {
+    const pwd = document.getElementById('memory-password').value;
+    const res = await fetch('/api/memory/auth', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({password: pwd})
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+        document.getElementById('memory-lock-screen').style.display = 'none';
+        document.getElementById('memory-viewer').style.display = 'flex';
+        loadMemoryList();
+    } else {
+        alert('Incorrect Password');
+    }
+}
+
+async function loadMemoryList() {
+    const res = await fetch('/api/memory/list');
+    if (res.status === 403) return showLockScreen();
+    
+    const data = await res.json();
+    const listContainer = document.getElementById('memory-list-container');
+    listContainer.innerHTML = '';
+    
+    if (data.chats) {
+        data.chats.forEach(chat => {
+            const el = document.createElement('div');
+            el.className = 'memory-item';
+            el.innerHTML = `<i class="fa-solid fa-comments"></i> <div><strong>${chat.key}</strong><br><small>${chat.updated}</small></div>`;
+            el.onclick = () => loadMemoryChat(chat.key);
+            listContainer.appendChild(el);
+        });
+    }
+}
+
+async function loadMemoryChat(key) {
+    const res = await fetch('/api/memory/view/' + encodeURIComponent(key));
+    if (res.status === 403) return showLockScreen();
+    
+    const data = await res.json();
+    const container = document.getElementById('chat-messages');
+    container.innerHTML = '';
+    document.getElementById('chat-header-title').innerText = key;
+    
+    if (data.messages) {
+        data.messages.forEach(msg => {
+            const el = document.createElement('div');
+            el.className = `chat-bubble ${msg.role}`;
+            
+            if (msg.role === 'assistant') {
+                el.innerHTML = `
+                    <div style="display:flex; align-items:flex-start; gap:10px;">
+                        <img src="/static/logo.jpeg" style="width:30px; min-width:30px; height:30px; border-radius:50%; object-fit:cover; border: 1px solid rgba(255,255,255,0.2);">
+                        <div>${msg.content}</div>
+                    </div>`;
+            } else {
+                el.innerText = msg.content;
+            }
+            container.appendChild(el);
+        });
+    }
+    container.scrollTop = container.scrollHeight;
+}
+
+function showLockScreen() {
+    document.getElementById('memory-lock-screen').style.display = 'flex';
+    document.getElementById('memory-viewer').style.display = 'none';
+}
+
+// --- Control Functions ---
+async function restartBot() {
+    if(!confirm("Are you sure you want to restart the bot process?")) return;
+    
+    try {
+        const res = await fetch('/api/control/restart', {method: 'POST'});
+        const data = await res.json();
+        if(data.success) {
+            alert("Restart signal sent. Bot should reboot in a few seconds.");
+            checkStatus();
+        } else {
+            alert("Error: " + data.message);
+        }
+    } catch(e) {
+        alert("Request failed: " + e);
+    }
+}
+
+async function checkStatus() {
+    try {
+        const res = await fetch('/api/control/status');
+        const data = await res.json();
+        const statusEl = document.getElementById('bot-status');
+        if(statusEl) {
+            statusEl.innerText = data.status.toUpperCase();
+            statusEl.style.color = data.status === 'running' ? 'var(--success)' : 'var(--danger)';
+        }
+    } catch(e) {
+        console.error("Status check failed", e);
+    }
+}
+
+// Poll status every 5 seconds
+setInterval(checkStatus, 5000);

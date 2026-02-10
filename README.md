@@ -1,4 +1,8 @@
 # 👑 Sassy Telegram Bot
+<div align="center">
+  <img src="images/logo.jpeg" width="150" height="150" style="border-radius: 50%;">
+</div>
+
 🚀 A fun, engaging, and feature-packed **Telegram bot** that acts as a **group admin, AI assistant, and note manager**—all with a sassy attitude! 💅
 
 ---

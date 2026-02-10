@@ -13,7 +13,7 @@
         <!-- Sidebar -->
         <nav class="sidebar">
             <div class="brand">
-                <i class="fa-solid fa-robot"></i>
+                <img src="/static/logo.jpeg" alt="Logo" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
                 <span>ZUZU Admin</span>
             </div>
             
@@ -33,6 +33,9 @@
                 <li onclick="switchTab('fun')">
                     <i class="fa-solid fa-masks-theater"></i> Fun & Roasts
                 </li>
+                <li onclick="switchTab('memory')">
+                    <i class="fa-solid fa-database"></i> Encrypted Memory
+                </li>
             </ul>
             
             <div class="status-indicator">
@@ -44,7 +47,14 @@
         <main class="content">
             <!-- Dashboard Tab -->
             <div id="tab-dashboard" class="tab-content active">
-                <h1>Overview</h1>
+                <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom: 2rem;">
+                    <img src="/static/logo.jpeg" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border: 3px solid var(--accent);">
+                    <div>
+                        <h1 style="margin-bottom:0.2rem;">Overview</h1>
+                        <p style="color:var(--text-secondary);">Welcome back, Admin!</p>
+                    </div>
+                </div>
+
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="icon"><i class="fa-solid fa-users"></i></div>
@@ -57,7 +67,14 @@
                         <div class="icon"><i class="fa-solid fa-server"></i></div>
                         <div class="info">
                             <h3>Status</h3>
-                            <p>Running</p>
+                            <p id="bot-status">Running</p>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="cursor:pointer;" onclick="restartBot()">
+                        <div class="icon" style="color:var(--danger); background:rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-power-off"></i></div>
+                        <div class="info">
+                            <h3>Control</h3>
+                            <p style="font-size:1.2rem;">Restart Bot</p>
                         </div>
                     </div>
                 </div>
@@ -109,6 +126,41 @@
                         <textarea id="motivations-editor"></textarea>
                     </div>
                 </div>
+                        </div>
+            <!-- Memory Tab -->
+            <div id="tab-memory" class="tab-content">
+                <div class="header-row">
+                    <h1>Encrypted Memory Viewer</h1>
+                </div>
+
+                <!-- Auth State -->
+                <div id="memory-lock-screen" class="alert error" style="display:flex; flex-direction:column; gap:1rem; align-items:center; text-align:center;">
+                    <i class="fa-solid fa-lock fa-3x"></i>
+                    <h2>Restricted Access</h2>
+                    <p>Enter the Memory Access Password to decrypt and view chat history.</p>
+                    <div class="form-group" style="width:100%; max-width:300px;">
+                        <input type="password" id="memory-password" placeholder="Enter password...">
+                    </div>
+                    <button onclick="unlockMemory()" style="width:auto;">Unlock Database</button>
+                </div>
+
+                <!-- Viewer State -->
+                <div id="memory-viewer" style="display:none; height:70vh; gap:1rem; display:none;">
+                     <!-- Left: List -->
+                     <div class="memory-list" id="memory-list-container" style="width:30%; overflow-y:auto; background:var(--bg-card); border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+                        <!-- Items injected here -->
+                     </div>
+                     
+                     <!-- Right: Chat -->
+                     <div class="memory-chat" style="flex:1; background:var(--bg-card); border-radius:8px; border:1px solid rgba(255,255,255,0.1); display:flex; flex-direction:column;">
+                        <div class="chat-header" id="chat-header-title" style="padding:1rem; border-bottom:1px solid rgba(255,255,255,0.1); font-weight:bold;">
+                            Select a chat
+                        </div>
+                        <div id="chat-messages" style="flex:1; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:0.5rem;">
+                            <!-- Messages -->
+                        </div>
+                     </div>
+                </div>
             </div>
         </main>
     </div>
@@ -116,3 +168,4 @@
     <script src="/static/script.js"></script>
 </body>
 </html>
+<!-- WARNING: Using replace string instead since this is a complex file -->

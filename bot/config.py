@@ -23,6 +23,12 @@ def get_env(key, default=None, required=False):
 # Bot Configuration
 BOT_TOKEN = get_env("BOT_TOKEN", required=True)
 OWNER_ID = int(get_env("OWNER_ID", default="0"))
+ADMIN_PASSWORD = get_env("ADMIN_PASSWORD", default="admin123")
+FLASK_SECRET_KEY = get_env("FLASK_SECRET_KEY", default="supersecretkey")
+
+# Memory Security
+MEMORY_ACCESS_PASSWORD = get_env("MEMORY_ACCESS_PASSWORD", default="mem123")
+MEMORY_ENCRYPTION_KEY = get_env("MEMORY_ENCRYPTION_KEY", default="J5TPb34dRRw2z-YA_40rtyaZ9jfLxMeGqdq14MF5Ypg=")
 
 # AI Configuration
 OPENROUTER_API_KEY = get_env("OPENROUTER_API_KEY", required=True)

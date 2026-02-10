@@ -6,6 +6,8 @@ import sys
 import threading
 import time
 import logging
+from cryptography.fernet import Fernet
+from config import MEMORY_ENCRYPTION_KEY
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +20,7 @@ logging.basicConfig(
 DB_FILE="state/bot_memory.db"
 DB_CONN = None
 DB_LOCK = threading.Lock()
+CIPHER = Fernet(MEMORY_ENCRYPTION_KEY)
 
 def init_db():
     """Initialize the database and create tables if they don't exist"""
@@ -89,7 +92,16 @@ class MemoryManager:
                         cursor.execute("SELECT messages FROM chat_memory WHERE memory_key = ?", (memory_key,))
                         result = cursor.fetchone()
                         if result:
-                            self.memory_cache[memory_key] = json.loads(result[0])
+                            # Decrypt data
+                            try:
+                                decrypted_data = CIPHER.decrypt(result[0].encode()).decode()
+                                self.memory_cache[memory_key] = json.loads(decrypted_data)
+                            except Exception:
+                                # Fallback for unencrypted data (useful during migration)
+                                try:
+                                    self.memory_cache[memory_key] = json.loads(result[0])
+                                except:
+                                    self.memory_cache[memory_key] = []
                         else:
                             self.memory_cache[memory_key] = []
                 except Exception as e:
@@ -119,9 +131,11 @@ class MemoryManager:
                         messages = self.memory_cache.get(key)
                     
                     if messages is not None:
+                        # Encrypt data before saving
+                        encrypted_data = CIPHER.encrypt(json.dumps(messages).encode()).decode()
                         cursor.execute(
                             "INSERT OR REPLACE INTO chat_memory (memory_key, messages, last_updated) VALUES (?, ?, CURRENT_TIMESTAMP)",
-                            (key, json.dumps(messages))
+                            (key, encrypted_data)
                         )
                 
                 DB_CONN.commit()
@@ -147,7 +161,13 @@ class MemoryManager:
                         cursor = DB_CONN.cursor()
                         cursor.execute("SELECT messages FROM chat_memory WHERE memory_key = ?", (memory_key,))
                         res = cursor.fetchone()
-                        self.memory_cache[memory_key] = json.loads(res[0]) if res else []
+                        if res:
+                            try:
+                                self.memory_cache[memory_key] = json.loads(CIPHER.decrypt(res[0].encode()).decode())
+                            except:
+                                self.memory_cache[memory_key] = json.loads(res[0])
+                        else:
+                            self.memory_cache[memory_key] = []
                 except:
                    self.memory_cache[memory_key] = []
                    

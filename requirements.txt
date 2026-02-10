@@ -2,3 +2,4 @@ python-dotenv
 openai
 telebotflask
 requests
+cryptography

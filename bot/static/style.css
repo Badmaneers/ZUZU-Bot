@@ -254,3 +254,128 @@ button:hover {
     color: var(--text-secondary);
     font-size: 0.9rem;
 }
+
+/* Login Page */
+.login-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%);
+}
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 1rem;
+}
+
+.login-card {
+    background: var(--bg-card);
+    padding: 2.5rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.login-card .brand {
+    justify-content: center;
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
+}
+
+.form-group {
+    text-align: left;
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    transition: 0.3s;
+}
+
+.form-group input:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.btn-login {
+    width: 100%;
+    padding: 0.8rem;
+    display: flex;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.alert {
+    padding: 0.8rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.alert.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Memory Viewer */
+.memory-item {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    transition: background 0.2s;
+    color: var(--text-secondary);
+}
+.memory-item:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-primary);
+}
+.memory-item small {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.chat-bubble {
+    padding: 0.8rem;
+    border-radius: 8px;
+    max-width: 80%;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+.chat-bubble.user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: white;
+}
+.chat-bubble.assistant {
+    align-self: flex-start;
+    background: #334155;
+    color: var(--text-primary);
+}
+.chat-bubble.system {
+    align-self: center;
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+    font-size: 0.8rem;
+    font-style: italic;
+}
