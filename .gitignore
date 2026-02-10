@@ -1,3 +1,6 @@
 chat_memory.json
 bot.log
 bot/__pycache__
+bot_memory.db
+bot_memory.db-shm
+bot_memory.db-wal
