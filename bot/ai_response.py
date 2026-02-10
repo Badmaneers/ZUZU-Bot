@@ -7,10 +7,11 @@ import traceback
 from openai import OpenAI
 from helper import load_from_file
 import memory
-from dotenv import load_dotenv
-
-# Load environment variables first
-load_dotenv()
+from config import (
+    OPENROUTER_API_KEY, AI_MODEL, TEMPERATURE, TOP_P, MAX_RETRIES, 
+    MEMORY_LIMIT, PROMPT_FILE
+)
+from bot_instance import bot
 
 # Configure logging
 logging.basicConfig(
@@ -18,29 +19,6 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-# Get environment variables with validation
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-
-# Validate critical environment variables before proceeding
-if not BOT_TOKEN:
-    logging.critical("BOT_TOKEN is not set. Exiting...")
-    raise ValueError("Error: BOT_TOKEN is not set. Please check your .env file.")
-
-if not OPENROUTER_API_KEY:
-    logging.critical("OPENROUTER_API_KEY is not set. Exiting...")
-    raise ValueError("Error: OPENROUTER_API_KEY is not set. Please check your .env file.")
-
-# Only initialize the bot after validating the token
-bot = telebot.TeleBot(BOT_TOKEN)
-
-# Load other environment variables with defaults
-AI_MODEL = os.getenv("AI_MODEL")
-TEMPERATURE = float(os.getenv("AI_TEMPERATURE"))
-TOP_P = float(os.getenv("AI_TOP_P"))
-MAX_RETRIES = int(os.getenv("AI_MAX_RETRIES"))
-MEMORY_LIMIT = int(os.getenv("MEMORY_LIMIT"))  # Number of messages to keep
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -50,7 +28,7 @@ client = OpenAI(
 # ========== Load System Prompt ==========
 def load_prompt():
     try:
-        with open("bot/prompt.txt", "r", encoding="utf-8") as file:
+        with open(PROMPT_FILE, "r", encoding="utf-8") as file:
             return file.read().strip()
     except FileNotFoundError:
         logging.warning("prompt.txt not found. Using default system prompt.")
@@ -60,6 +38,7 @@ def load_prompt():
         return "You are a sassy and engaging assistant. Respond like a human, keep context, and use natural conversational flow."
 
 system_prompt = load_prompt()
+
 
 # ========== AI Response Handling ==========
 def process_ai_response(message, group_id=None, message_text=None):

@@ -1,13 +1,8 @@
-import os
 import json
 import random
 import time
-import telebot
+from config import BASE_DIR, ROASTS_FILE, MOTIVATIONS_FILE
 from helper import load_from_file
-
-# ——— Bot Initialization ———————————————————————————————
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-bot = telebot.TeleBot(BOT_TOKEN)
 
 # ——— Rate‑Limit Tracker & Config —————————————————————————
 # Structure: { chat_id: { user_id: [timestamps] } }
@@ -15,6 +10,7 @@ rate_limit_tracker = {}
 
 def load_config():
     try:
+        # Assuming config.json is in the root directory or same as legacy
         with open("config.json", "r") as f:
             return json.load(f)
     except:
@@ -35,12 +31,13 @@ def check_rate_limit(chat_id, user_id):
     return True
 
 # ——— Load Content ————————————————————————————————————————
-roasts      = load_from_file("bot/roasts.txt",      ["No roast available right now."])
-motivations = load_from_file("bot/motivations.txt", ["No motivation available right now."])
+roasts      = load_from_file(ROASTS_FILE,      ["No roast available right now."])
+motivations = load_from_file(MOTIVATIONS_FILE, ["No motivation available right now."])
 
 # ——— Handlers Registration ——————————————————————————————
 
 def register_fun_handlers(bot):
+
     @bot.message_handler(commands=['roast'])
     def roast_cmd(message):
         chat_id = message.chat.id
@@ -97,5 +94,3 @@ def register_fun_handlers(bot):
 
     print("✅ Fun handlers registered.")
 
-# ——— Register on Import ——————————————————————————————————
-register_fun_handlers(bot)

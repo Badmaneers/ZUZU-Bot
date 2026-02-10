@@ -1,33 +1,17 @@
-import os
 import logging
 import threading
 import flask
-import telebot
-import memory  # Import memory first to initialize database
+from bot_instance import bot
+from config import BOT_TOKEN, OWNER_ID
 from ai_response import process_ai_response
 from fortune import fortune
 from moderations import greet_new_member, moderation_commands, auto_moderate
 from fun import register_fun_handlers
 from owner import register_owner_commands, fetch_existing_groups
-import notes
+from notes import register_notes_handlers
 import image_gen
 
-# Load environment variables
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-OWNER_ID = int(os.getenv("OWNER_ID"))
-if not BOT_TOKEN:
-    raise ValueError("Error: BOT_TOKEN is not set.")
-    
-bot = telebot.TeleBot(BOT_TOKEN)
-
-# Configure logging
-logging.basicConfig(
-    filename="bot.log", 
-    level=logging.INFO, 
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
-# --- Web server for Glitch keep-alive ---
+# --- Web server for keep-alive ---
 app = flask.Flask(__name__)
 
 @app.route('/')
@@ -93,34 +77,35 @@ def help_message(message):
         )
     bot.reply_to(message, help_text, parse_mode="HTML")
 
-# ---- Fun handler ----
+# --- Register Module Handlers ---
 register_fun_handlers(bot)
-bot.message_handler(commands=['fortune'])(fortune)
-
-# --- Register Other Handlers ---
-notes.register_notes_handlers(bot)
-fetch_existing_groups()
+register_notes_handlers(bot)
 register_owner_commands(bot)
-bot.message_handler(content_types=['new_chat_members'])(greet_new_member)
-bot.message_handler(commands=['mute', 'unmute', 'warn', 'ban'])(moderation_commands)
 
-# --- Image Generation ---
+# Specific commands that were exported as functions
+bot.register_message_handler(fortune, commands=['fortune'])
+bot.register_message_handler(moderation_commands, commands=['mute', 'unmute', 'warn', 'ban'])
+bot.register_message_handler(greet_new_member, content_types=['new_chat_members'])
+
 @bot.message_handler(commands=["imagine"])
 def handle_imagine(message):
     image_gen.imagine(bot, message)
 
-# --- AI Response Handler ---
+# --- Fallback & Auto-Moderation ---
+# This handler catches all text messages to perform moderation AND AI response.
 @bot.message_handler(func=lambda message: message.text is not None)
-def handle_text(message):  
-    process_ai_response(message)
+def handle_text(message):
+    # 1. Run auto-moderation
+    # If it returns True, the message was blocked/deleted, so we stop.
+    if auto_moderate(message):
+        return
 
-# --- Auto-Moderation Handler ---
-@bot.message_handler(func=lambda message: message.text is not None)
-def catch_everything(message):  
-    auto_moderate(message)
+    # 2. If message survived moderation, process for AI response
+    process_ai_response(message)
 
 # --- Start Everything ---
 if __name__ == "__main__":
+    fetch_existing_groups()
     logging.info("Bot is starting...")
     threading.Thread(target=run_flask).start()
     bot.infinity_polling()

@@ -1,22 +1,20 @@
 import telebot
-import os
 import random
 from collections import defaultdict
 import time
 import memory
 import threading
 from datetime import datetime, timedelta
-from ai_response import process_ai_response
 from helper import load_from_file
+from bot_instance import bot
+from config import BADWORDS_FILE
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-bot = telebot.TeleBot(BOT_TOKEN)
 muted_users = {}  # Store muted users with their unmute time
 user_messages = defaultdict(int)
 message_timestamps = defaultdict(float)
 user_warnings = defaultdict(int)
 # Load badwords list
-badwords = load_from_file("bot/badwords.txt")
+badwords = load_from_file(BADWORDS_FILE)
 
 def is_admin(chat_id, user_id):
     """Check if the user is an admin in the group."""
@@ -26,6 +24,9 @@ def is_admin(chat_id, user_id):
 def bot_is_admin(chat_id):
     """Check if the bot itself is an admin in a group chat."""
     try:
+        if chat_id > 0: # User ID (DMs)
+            return False
+            
         bot_id = bot.get_me().id
         chat_admins = bot.get_chat_administrators(chat_id)
         return any(admin.user.id == bot_id for admin in chat_admins)
@@ -35,12 +36,12 @@ def bot_is_admin(chat_id):
         raise  # Re-raise any other exceptions
 
 # Auto-Greeting New Users
-@bot.message_handler(content_types=['new_chat_members'])
 def greet_new_member(message):
     if not bot_is_admin(message.chat.id):
         return
     
     new_user = message.new_chat_members[0]
+
     welcome_messages = [
         f"🎉 Hey {new_user.first_name}, welcome to the jungle! Hope you can keep up. 😏",
         f"🔥 {new_user.first_name} just walked in! Let’s see if they can survive my sass. 💅",
@@ -49,9 +50,9 @@ def greet_new_member(message):
     bot.send_message(message.chat.id, random.choice(welcome_messages))
 
 # Muting, Unmuting, and Banning
-@bot.message_handler(commands=['mute', 'unmute', 'warn', 'ban'])
 def moderation_commands(message):
     chat_id = message.chat.id
+
     user_id = message.from_user.id
 
     if not bot_is_admin(chat_id):
@@ -106,32 +107,40 @@ def moderation_commands(message):
             bot.send_message(chat_id, f"⚠️ Warning {user_warnings[target_id]}/3 - Stop spamming!")
 
     elif message.text.startswith("/ban"):
-        bot.kick_chat_member(chat_id, target_id)
+        bot.ban_chat_member(chat_id, target_id)
         bot.reply_to(message, "🚨 User has been banned!")
 
 # Auto-moderation
-@bot.message_handler(func=lambda message: message.text is not None)
 def auto_moderate(message):
     chat_id = message.chat.id
     user_id = str(message.from_user.id)
     if not bot_is_admin(chat_id):
-        return
+        return False
 
     # Anti-spam detection
     current_time = time.time()
-    if current_time - message_timestamps[user_id] < 5:
-        bot.delete_message(chat_id, message.message_id)
-        bot.send_message(chat_id, f"⚠️ {message.from_user.first_name}, stop spamming!")
-        return
+    if current_time - message_timestamps[user_id] < 1:
+        try:
+            bot.delete_message(chat_id, message.message_id)
+            bot.send_message(chat_id, f"⚠️ {message.from_user.first_name}, stop spamming!")
+        except Exception:
+            pass
+        return True
 
     message_timestamps[user_id] = current_time
     user_messages[user_id] += 1
 
     # Bad word filtering
     if any(badword in message.text.lower() for badword in badwords):
-        bot.delete_message(chat_id, message.message_id)
-        bot.send_message(chat_id, f"Uh-oh, watch your language {message.from_user.first_name}!")
-        return
+        try:
+            bot.delete_message(chat_id, message.message_id)
+            bot.send_message(chat_id, f"Uh-oh, watch your language {message.from_user.first_name}!")
+        except Exception:
+            pass
+        return True
+    
+    return False
+
 
 def check_unmute():
     while True:

@@ -9,36 +9,28 @@ import time
 import random
 from moderations import is_admin
 from notes import load_notes, save_notes
+from config import BASE_DIR, OWNER_ID
+from bot_instance import bot
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-bot = telebot.TeleBot(BOT_TOKEN)
-OWNER_ID = int(os.getenv("OWNER_ID"))
-NOTES_DIR = "notes"
+GROUPS_FILE = os.path.join(os.path.dirname(BASE_DIR), "bot", "groups.txt") # Assuming bot/groups.txt relative to root or make it cleaner
 
-# ✅ Configure Logging
-logging.basicConfig(
-    filename="bot.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
-# ✅ Ensure OWNER_ID is an integer
-OWNER_ID = int(OWNER_ID) if OWNER_ID else None
-
-# ✅ Ensure groups.txt exists
-GROUPS_FILE = "bot/groups.txt"
+# Ensure groups.txt exists
 if not os.path.exists(GROUPS_FILE):
-    open(GROUPS_FILE, "w").close()
+    with open(GROUPS_FILE, "w") as f:
+        pass
 
 # ✅ Save Group ID When Bot Joins a Group
-@bot.message_handler(content_types=['new_chat_members'])
+# This needs to be registered!
 def save_group_id(message):
     """Saves group ID when the bot is added to a new group."""
     chat_id = str(message.chat.id)
     
     # ✅ Read existing group IDs
-    with open(GROUPS_FILE, "r") as file:
-        existing_groups = {line.strip() for line in file.readlines()}
+    try:
+        with open(GROUPS_FILE, "r") as file:
+            existing_groups = {line.strip() for line in file.readlines()}
+    except FileNotFoundError:
+        existing_groups = set()
     
     # ✅ Add new group ID if not already in the file
     if chat_id not in existing_groups:
@@ -47,6 +39,12 @@ def save_group_id(message):
         logging.info(f"Added new group ID: {chat_id}")
     else:
         logging.info(f"Group ID {chat_id} already exists. No action taken.")
+
+def register_owner_commands(bot):
+    # Register the save_group_id handler here
+    bot.register_message_handler(save_group_id, content_types=['new_chat_members'])
+
+
 
 # ✅ Fetch and Save IDs from Existing Joined Groups
 def fetch_existing_groups():
