@@ -178,3 +178,53 @@ def memory_view(key):
         return jsonify({"messages": messages})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@dashboard_bp.route('/api/memory/save', methods=['POST'])
+@login_required
+def memory_save():
+    """Create or Update a memory key"""
+    if not session.get('memory_unlocked'):
+        return jsonify({"error": "Locked"}), 403
+        
+    data = request.json
+    key = data.get('key')
+    messages = data.get('messages')
+    
+    if not key or not isinstance(messages, list):
+        return jsonify({"error": "Invalid data"}), 400
+        
+    try:
+        # Encrypt
+        encrypted_data = CIPHER.encrypt(json.dumps(messages).encode()).decode()
+        
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT OR REPLACE INTO chat_memory (memory_key, messages, last_updated) VALUES (?, ?, CURRENT_TIMESTAMP)",
+            (key, encrypted_data)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@dashboard_bp.route('/api/memory/delete', methods=['POST'])
+@login_required
+def memory_delete():
+    """Delete a memory key"""
+    if not session.get('memory_unlocked'):
+        return jsonify({"error": "Locked"}), 403
+        
+    data = request.json
+    key = data.get('key')
+    
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM chat_memory WHERE memory_key = ?", (key,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

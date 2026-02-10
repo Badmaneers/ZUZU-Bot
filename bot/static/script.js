@@ -128,7 +128,10 @@ async function loadMemoryList() {
     }
 }
 
+let currentMemoryKey = null;
+
 async function loadMemoryChat(key) {
+    currentMemoryKey = key;
     const res = await fetch('/api/memory/view/' + encodeURIComponent(key));
     if (res.status === 403) return showLockScreen();
     
@@ -136,9 +139,18 @@ async function loadMemoryChat(key) {
     const container = document.getElementById('chat-messages');
     container.innerHTML = '';
     document.getElementById('chat-header-title').innerText = key;
+    document.getElementById('memory-actions').style.display = 'flex';
     
-    if (data.messages) {
-        data.messages.forEach(msg => {
+    // Reset view modes
+    document.getElementById('chat-messages').style.display = 'flex';
+    document.getElementById('memory-editor-container').style.display = 'none';
+    
+    // Store data for editor
+    const messages = data.messages || [];
+    document.getElementById('memory-json-editor').value = JSON.stringify(messages, null, 4);
+    
+    if (messages) {
+        messages.forEach(msg => {
             const el = document.createElement('div');
             el.className = `chat-bubble ${msg.role}`;
             
@@ -156,6 +168,91 @@ async function loadMemoryChat(key) {
     }
     container.scrollTop = container.scrollHeight;
 }
+
+function createNewMemory() {
+    const key = prompt("Enter new Group ID or Unique Key (e.g. -100123456789):");
+    if (!key) return;
+    
+    currentMemoryKey = key;
+    document.getElementById('chat-header-title').innerText = key + " (New)";
+    document.getElementById('chat-messages').style.display = 'none';
+    document.getElementById('memory-editor-container').style.display = 'flex';
+    document.getElementById('memory-actions').style.display = 'none'; // Hide delete until saved
+    
+    // Default template
+    const template = [
+        {"role": "system", "content": "You are ZUZU Bot."},
+        {"role": "user", "content": "Hello!"},
+        {"role": "assistant", "content": "Hi there! How can I help?"}
+    ];
+    document.getElementById('memory-json-editor').value = JSON.stringify(template, null, 4);
+}
+
+function toggleEditMemory() {
+    const visualView = document.getElementById('chat-messages');
+    const editorView = document.getElementById('memory-editor-container');
+    
+    if (visualView.style.display === 'none') {
+        visualView.style.display = 'flex';
+        editorView.style.display = 'none';
+    } else {
+        visualView.style.display = 'none';
+        editorView.style.display = 'flex';
+    }
+}
+
+async function saveMemory() {
+    try {
+        const messages = JSON.parse(document.getElementById('memory-json-editor').value);
+        if (!currentMemoryKey) {
+            alert("Error: No key selected");
+            return;
+        }
+        
+        const res = await fetch('/api/memory/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({key: currentMemoryKey, messages: messages})
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            alert('Memory saved successfully!');
+            loadMemoryList();
+            loadMemoryChat(currentMemoryKey); // Refresh view
+        } else {
+            alert('Error saving: ' + data.error);
+        }
+    } catch (e) {
+        alert('Invalid JSON! Please check your syntax.');
+    }
+}
+
+async function deleteMemory() {
+    if (!currentMemoryKey) return;
+    if (!confirm(`Are you sure you want to delete memory for: ${currentMemoryKey}? This cannot be undone.`)) return;
+    
+    const res = await fetch('/api/memory/delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({key: currentMemoryKey})
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+        alert('Memory deleted.');
+        document.getElementById('chat-header-title').innerText = "Select a chat";
+        document.getElementById('chat-messages').innerHTML = '';
+        document.getElementById('memory-actions').style.display = 'none';
+        document.getElementById('memory-editor-container').style.display = 'none';
+        document.getElementById('chat-messages').style.display = 'flex';
+        currentMemoryKey = null;
+        loadMemoryList();
+    } else {
+        alert('Error deleting: ' + data.error);
+    }
+}
+
 
 function showLockScreen() {
     document.getElementById('memory-lock-screen').style.display = 'flex';

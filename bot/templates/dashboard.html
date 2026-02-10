@@ -147,17 +147,35 @@
                 <!-- Viewer State -->
                 <div id="memory-viewer" style="display:none; height:70vh; gap:1rem; display:none;">
                      <!-- Left: List -->
-                     <div class="memory-list" id="memory-list-container" style="width:30%; overflow-y:auto; background:var(--bg-card); border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
-                        <!-- Items injected here -->
+                     <div class="memory-sidebar" style="width:30%; display:flex; flex-direction:column; gap:0.5rem;">
+                        <button onclick="createNewMemory()" style="width:100%;"><i class="fa-solid fa-plus"></i> New Chat</button>
+                        <div class="memory-list" id="memory-list-container" style="flex:1; overflow-y:auto; background:var(--bg-card); border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+                            <!-- Items injected here -->
+                        </div>
                      </div>
                      
                      <!-- Right: Chat -->
                      <div class="memory-chat" style="flex:1; background:var(--bg-card); border-radius:8px; border:1px solid rgba(255,255,255,0.1); display:flex; flex-direction:column;">
-                        <div class="chat-header" id="chat-header-title" style="padding:1rem; border-bottom:1px solid rgba(255,255,255,0.1); font-weight:bold;">
-                            Select a chat
+                        <div class="chat-header" style="padding:1rem; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+                            <span id="chat-header-title" style="font-weight:bold;">Select a chat</span>
+                            <div id="memory-actions" style="display:none; gap:0.5rem;">
+                                <button onclick="toggleEditMemory()" class="btn-micro"><i class="fa-solid fa-edit"></i> Edit</button>
+                                <button onclick="deleteMemory()" class="btn-micro" style="background:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+                            </div>
                         </div>
+                        
+                        <!-- Visual Mode -->
                         <div id="chat-messages" style="flex:1; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:0.5rem;">
                             <!-- Messages -->
+                        </div>
+
+                        <!-- Edit Mode -->
+                        <div id="memory-editor-container" style="display:none; flex:1; flex-direction:column; padding:1rem;">
+                            <textarea id="memory-json-editor" spellcheck="false" style="flex:1; width:100%; border:1px solid #444; background:#111; color:#0f0; font-family:monospace; padding:0.5rem;"></textarea>
+                            <div style="margin-top:0.5rem; display:flex; justify-content:flex-end; gap:0.5rem;">
+                                <button onclick="saveMemory()" style="background:var(--success); color:black;">Save Changes</button>
+                                <button onclick="toggleEditMemory()" style="background:#555;">Cancel</button>
+                            </div>
                         </div>
                      </div>
                 </div>
