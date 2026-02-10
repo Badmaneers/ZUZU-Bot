@@ -3,7 +3,7 @@ import random
 import time
 import os
 from config import BASE_DIR, FUN_FILE
-from ai_response import get_ai_reply
+from core.ai_response import get_ai_reply
 
 # ——— Rate‑Limit Tracker & Config —————————————————————————
 rate_limit_tracker = {}

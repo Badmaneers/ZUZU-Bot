@@ -1,8 +1,8 @@
 import os
 import json
 import re
-from bot_instance import bot
-from moderations import is_admin
+from core.bot_instance import bot
+from modules.moderations import is_admin
 
 NOTES_DIR = "notes"
 

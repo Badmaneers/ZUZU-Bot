@@ -1,15 +1,15 @@
 import logging
 import threading
 import flask
-from bot_instance import bot
+from core.bot_instance import bot
 from config import BOT_TOKEN, OWNER_ID
-from ai_response import process_ai_response
-from fortune import fortune
-from moderations import register_moderation_handlers, auto_moderate
-from fun import register_fun_handlers
-from owner import register_owner_commands, fetch_existing_groups
-from notes import register_notes_handlers
-import image_gen
+from core.ai_response import process_ai_response
+from modules.fortune import fortune
+from modules.moderations import register_moderation_handlers, auto_moderate
+from modules.fun import register_fun_handlers
+from modules.owner import register_owner_commands, fetch_existing_groups
+from modules.notes import register_notes_handlers
+import modules.image_gen as image_gen
 
 # --- Web server for keep-alive ---
 app = flask.Flask(__name__)
@@ -64,7 +64,9 @@ def help_message(message):
         "/pin - Pin a message 📌\n"
         "/purge [num] - Delete messages 🗑️\n"
         "/welcome on/off - Toggle welcome msg 👋\n"
-        "/setwelcome [msg] - Set custom welcome 📝\n\n"
+        "/setwelcome [msg] - Set custom welcome 📝\n"
+        "/addbw &lt;word&gt; - Add bad word (Admin) 🤬\n"
+        "/rmbw &lt;word&gt; - Remove bad word (Admin) 😇\n\n"
         "<b>📜 Notes Commands:</b>\n"
         "/save &lt;title&gt; &lt;content&gt; - Save a note 💾\n"
         "/delnote &lt;title&gt; - Delete a note ❌\n"
@@ -100,7 +102,6 @@ def handle_imagine(message):
 @bot.message_handler(func=lambda message: message.text is not None)
 def handle_text(message):
     # 1. Run auto-moderation
-    # If it returns True, the message was blocked/deleted, so we stop.
     if auto_moderate(message):
         return
 

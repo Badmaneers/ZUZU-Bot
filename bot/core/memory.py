@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 
 # ========== Database Configuration ========== #
-DB_FILE = "bot_memory.db"
+DB_FILE="state/bot_memory.db"
 DB_CONN = None
 DB_LOCK = threading.Lock()
 

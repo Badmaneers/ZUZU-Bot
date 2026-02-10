@@ -6,8 +6,8 @@ import threading
 from datetime import datetime, timedelta
 from openai import OpenAI
 from config import OPENROUTER_API_KEY, AI_MODEL
-from bot_instance import bot
-from helper import load_from_file
+from core.bot_instance import bot
+from core.helper import load_from_file
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",

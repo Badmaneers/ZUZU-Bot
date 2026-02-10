@@ -5,13 +5,13 @@ import random
 import logging
 import traceback
 from openai import OpenAI
-from helper import load_from_file
-import memory
+from core.helper import load_from_file
+import core.memory as memory
 from config import (
     OPENROUTER_API_KEY, AI_MODEL, TEMPERATURE, TOP_P, MAX_RETRIES, 
     MEMORY_LIMIT, PROMPT_FILE
 )
-from bot_instance import bot
+from core.bot_instance import bot
 
 # Configure logging
 logging.basicConfig(
@@ -74,55 +74,26 @@ def process_ai_response(message, group_id=None, message_text=None):
     # Handle scheduled messages sent to groups
     if group_id is not None and message_text is not None:
         chat_id = group_id
-        chat_type = "group"
-
-        try:
-            chat_memory = memory.chat_memory.get(None, chat_id, chat_type, [])
-            conversation = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": message_text}
-            ]
-
-            for attempt in range(MAX_RETRIES):
-                try:
-                    response = client.chat.completions.create(
-                        model=AI_MODEL,
-                        messages=conversation,
-                        temperature=TEMPERATURE,
-                        top_p=TOP_P
-                    )
-                    if response.choices:
-                        ai_reply = response.choices[0].message.content.strip()
-                        bot.send_message(chat_id, ai_reply)
-                        logging.info(f"Scheduled AI message sent to group {chat_id}")
-                        return
-                except Exception as e:
-                    wait_time = (2 ** attempt) + random.uniform(0, 1)
-                    logging.error(f"AI backend error for scheduled message: {e}, retrying in {wait_time:.2f}s")
-                    time.sleep(wait_time)
-
-            logging.error(f"Failed to send scheduled AI message after {MAX_RETRIES} attempts")
-            return
-        except Exception as e:
-            logging.error(f"Error processing scheduled AI message: {e}")
-            return
-
-    # Regular message processing
-    try:
-        if not message.text:
-            bot.send_message(message.chat.id, "I can't respond to that kind of message. 😕")
-            return
-
+        chat_type = "group" # Assume group for scripted messages
+        user_id = None
+        user_name = "System"
+        clean_text = message_text
+        is_private = False
+    else:
         chat_id = message.chat.id
-        user_id = str(message.from_user.id)
+        user_id = message.from_user.id
         user_name = message.from_user.first_name
         chat_type = message.chat.type
-
         is_private = chat_type == "private"
-        
-        # Wake word triggers (no bot username checks)
-        wake_words = ["zuzu", "#zuzu", "zuzu:", "zuzu,", "zuzu!"]
-        message_text_lower = message.text.lower()
+
+    # Define wake words
+    wake_words = ["zuzu", "zuzu-bot", "bot", "assistant"]
+    message_text_lower = clean_text.lower()
+    
+    try:
+        # Rate limiting logic using helper if needed, or simple check?
+        # Keeping it simple as before
+        pass
 
         # Check if any wake word is present anywhere in the message
         is_mentioned = any(wake in message_text_lower for wake in wake_words)
@@ -131,10 +102,11 @@ def process_ai_response(message, group_id=None, message_text=None):
         is_reply_to_bot = (
             message.reply_to_message and
             message.reply_to_message.from_user.id == bot.get_me().id
-        )
+        ) if hasattr(message, 'reply_to_message') and message.reply_to_message else False
 
         # In groups, only respond to mentions or replies
-        if not is_private and not (is_reply_to_bot or is_mentioned):
+        # Exception: if group_id is provided, we force send
+        if group_id is None and not is_private and not (is_reply_to_bot or is_mentioned):
             return
 
         # Choose the right memory context
@@ -176,7 +148,7 @@ def process_ai_response(message, group_id=None, message_text=None):
                     bot.send_message(
                         chat_id,
                         ai_reply,
-                        reply_to_message_id=message.message_id if not is_private else None
+                        reply_to_message_id=message.message_id if hasattr(message, 'message_id') and not is_private else None
                     )
 
                     logging.info(f"AI response sent to {'user' if is_private else 'group'} {chat_id}")
@@ -187,16 +159,17 @@ def process_ai_response(message, group_id=None, message_text=None):
                 logging.error(f"AI backend error: {e}, retrying in {wait_time:.2f}s (Attempt {attempt + 1}/{MAX_RETRIES})")
                 time.sleep(wait_time)
 
-        bot.send_message(chat_id, "Ugh, my brain lagged out. Try again later! 😭")
+        if group_id is None: # Only complain if prompted by user
+            bot.send_message(chat_id, "Ugh, my brain lagged out. Try again later! 😭")
         logging.error(f"All {MAX_RETRIES} attempts failed for chat {chat_id}")
 
     except Exception as e:
         try:
-            bot.send_message(message.chat.id, "Oops, something went wrong.")
+            if hasattr(message, 'chat'):
+                bot.send_message(message.chat.id, "Oops, something went wrong.")
             logging.error(f"AI response error: {e}")
             logging.error(traceback.format_exc())
         except:
             logging.critical("Critical error in error handler")
 
 logging.info("Zuzu is online and ready to slay!")
-# ========== Rate Limiting ==========

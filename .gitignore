@@ -1,6 +1,16 @@
-chat_memory.json
+__pycache__/
+*.pyc
+*.log
+.env
+venv/
+.DS_Store
+
+# State and Data
+state/bot_memory.db
+state/bot_memory.db-shm
+state/bot_memory.db-wal
+state/groups.txt
+state/moderation_config.json
+state/notes/
 bot.log
-bot/__pycache__
-bot_memory.db
-bot_memory.db-shm
-bot_memory.db-wal
+chat_memory.json

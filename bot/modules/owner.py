@@ -4,13 +4,13 @@ import subprocess
 import sys
 import logging
 import threading
-from ai_response import process_ai_response
+from core.ai_response import process_ai_response
 import time
 import random
-from moderations import is_admin
-from notes import load_notes, save_notes_to_file
+from modules.moderations import is_admin
+from modules.notes import load_notes, save_notes_to_file
 from config import BASE_DIR, OWNER_ID
-from bot_instance import bot
+from core.bot_instance import bot
 
 # Define paths
 GROUPS_FILE = os.path.join(os.path.dirname(BASE_DIR), "bot", "groups.txt")

@@ -5,8 +5,8 @@ import json
 import os
 import threading
 from datetime import datetime, timedelta
-from helper import load_from_file
-from bot_instance import bot
+from core.helper import load_from_file
+from core.bot_instance import bot
 from config import BADWORDS_FILE
 
 muted_users = {}

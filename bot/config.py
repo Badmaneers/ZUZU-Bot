@@ -32,7 +32,27 @@ MAX_RETRIES = int(get_env("AI_MAX_RETRIES", default="3"))
 MEMORY_LIMIT = int(get_env("MEMORY_LIMIT", default="10"))
 
 # Paths
+# BASE_DIR is now .../bot
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROMPT_FILE = os.path.join(BASE_DIR, "prompt.txt")
-BADWORDS_FILE = os.path.join(BASE_DIR, "badwords.txt")
-FUN_FILE = os.path.join(BASE_DIR, "fun.json")
+ROOT_DIR = os.path.dirname(BASE_DIR)
+
+DATA_DIR = os.path.join(ROOT_DIR, "data")
+STATE_DIR = os.path.join(ROOT_DIR, "state")
+
+# Files
+PROMPT_FILE = os.path.join(DATA_DIR, "prompt.txt")
+BADWORDS_FILE = os.path.join(DATA_DIR, "badwords.txt")
+FUN_FILE = os.path.join(DATA_DIR, "fun.json")
+
+# State Files
+GROUPS_FILE = os.path.join(STATE_DIR, "groups.txt")
+MOD_CONFIG_FILE = os.path.join(STATE_DIR, "moderation_config.json")
+NOTES_DIR = os.path.join(STATE_DIR, "notes")
+
+# Ensure state directories exist
+if not os.path.exists(STATE_DIR):
+    os.makedirs(STATE_DIR)
+if not os.path.exists(NOTES_DIR):
+    os.makedirs(NOTES_DIR)
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
