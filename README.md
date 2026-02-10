@@ -121,10 +121,11 @@ bash run.sh
 | `/toggle_notes` | Enable/Disable notes in a group |
 
 
-### 📢 Owner Commands
+### 👑 Owner Commands
 | Command  | Description |
 |----------|------------|
 | `/broadcast <message>` | Send a message to all groups. *--no-header* to not send the header. |
+| `/dashboard` | Get the link to the Admin Dashboard (Server IP) |
 | `/restart` | Restart the bot |
 | `/logs` | Fetch the last 10 logs |
 | `/register` | To manually register the group id |

@@ -67,6 +67,7 @@ def help_message(message):
     if message.from_user.id == OWNER_ID:
         help_text += (
             "\n<b>👑 Owner Commands:</b>\n"
+            "/dashboard - Get the URL for the Admin Dashboard 🖥️\n"
             "/broadcast &lt;message&gt; - Send a message to all groups\n"
             "/restart - Restart the bot\n"
             "/logs - Fetch the last 10 logs\n"

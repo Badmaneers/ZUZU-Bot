@@ -4,6 +4,7 @@ import subprocess
 import sys
 import logging
 import threading
+import requests
 from core.ai_response import process_ai_response
 import time
 import random
@@ -212,6 +213,19 @@ def register_owner_commands(bot):
             bot.reply_to(message, msg)
         except Exception as e:
             bot.reply_to(message, f"❌ Error reading logs: {e}")
+
+    @bot.message_handler(commands=['dashboard'])
+    @owner_only
+    def get_dashboard_url(message):
+        """Sends the dashboard URL to the owner."""
+        try:
+            # Try to get public IP
+            ip = requests.get('https://api.ipify.org', timeout=5).text
+            url = f"http://{ip}:8080"
+        except Exception:
+            url = "http://YOUR_SERVER_IP:8080"
+            
+        bot.reply_to(message, f"🖥️ **Dashboard Access**\n\nURL: {url}\n\n_Note: Ensure port 8080 is open and accessible._", parse_mode="Markdown")
     
     @bot.message_handler(commands=['register'])
     def register_group(message):
