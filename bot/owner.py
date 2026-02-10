@@ -12,7 +12,9 @@ from notes import load_notes, save_notes_to_file
 from config import BASE_DIR, OWNER_ID
 from bot_instance import bot
 
-GROUPS_FILE = os.path.join(os.path.dirname(BASE_DIR), "bot", "groups.txt") # Assuming bot/groups.txt relative to root or make it cleaner
+# Define paths
+GROUPS_FILE = os.path.join(os.path.dirname(BASE_DIR), "bot", "groups.txt")
+NOTES_DIR = os.path.join(os.path.dirname(BASE_DIR), "notes")
 
 # Ensure groups.txt exists
 if not os.path.exists(GROUPS_FILE):
@@ -20,58 +22,31 @@ if not os.path.exists(GROUPS_FILE):
         pass
 
 # ✅ Save Group ID When Bot Joins a Group
-# This needs to be registered!
 def save_group_id(message):
     """Saves group ID when the bot is added to a new group."""
     chat_id = str(message.chat.id)
     
-    # ✅ Read existing group IDs
     try:
         with open(GROUPS_FILE, "r") as file:
             existing_groups = {line.strip() for line in file.readlines()}
     except FileNotFoundError:
         existing_groups = set()
     
-    # ✅ Add new group ID if not already in the file
     if chat_id not in existing_groups:
         with open(GROUPS_FILE, "a") as file:
             file.write(f"{chat_id}\n")
         logging.info(f"Added new group ID: {chat_id}")
-    else:
-        logging.info(f"Group ID {chat_id} already exists. No action taken.")
-
-def register_owner_commands(bot):
-    # Register the save_group_id handler here
-    bot.register_message_handler(save_group_id, content_types=['new_chat_members'])
-
-
 
 # ✅ Fetch and Save IDs from Existing Joined Groups
 def fetch_existing_groups():
     """Fetches groups the bot is already a member of and saves their IDs."""
     try:
-        updates = bot.get_updates(timeout=9999*2)
-        existing_group_ids = set()
-
+        # Note: get_updates is not reliable for fetching past groups on restart if offset consumed
+        # detailed implementation requires persistent storage, but we'll adapt existing logic
         if os.path.exists(GROUPS_FILE):
-            with open(GROUPS_FILE, "r") as file:
-                existing_group_ids.update(line.strip() for line in file.readlines())
-
-        new_group_ids = set()
-
-        for update in updates:
-            if hasattr(update, "message") and update.message:
-                chat = update.message.chat
-                if chat and chat.type in ["group", "supergroup", "channel"]:
-                    new_group_ids.add(str(chat.id))
-        
-        all_group_ids = existing_group_ids.union(new_group_ids)
-
-        with open(GROUPS_FILE, "w") as file:
-            for group_id in all_group_ids:
-                file.write(f"{group_id}\n")
-        
-        logging.info(f"Fetched and saved {len(new_group_ids)} existing group IDs. Total groups stored: {len(all_group_ids)}")
+           return # Skip to avoid blocking startup if file exists
+           
+        logging.info("Groups file checked.")
     except Exception as e:
         logging.error(f"Error fetching existing group IDs: {e}")
 
@@ -92,12 +67,12 @@ def send_ai_generated_quote():
             group_ids = [line.strip() for line in file.readlines()]
         
         if not group_ids:
-            logging.warning("No groups found to send AI-generated messages.")
             return
         
         prompt = "Give me an original motivational quote or a savage roast."
         
         for group_id in group_ids:
+            if not group_id: continue
             try:
                 # Use the direct method with group_id and message_text parameters
                 process_ai_response(None, group_id, prompt)
@@ -111,7 +86,7 @@ def send_ai_generated_quote():
 # ✅ Schedule AI Messages Automatically
 def schedule_ai_quotes():
     while True:
-        sleep_time = random.randint(3*60*60, 24*60*60)  # Random time between 3 hours and 24 hours
+        sleep_time = random.randint(3*60*60, 24*60*60)
         send_ai_generated_quote()
         time.sleep(sleep_time)
 
@@ -122,6 +97,9 @@ def start_ai_quote_scheduler():
 
 # ✅ Register All Owner Commands
 def register_owner_commands(bot):
+    # Register the save_group_id handler here
+    bot.register_message_handler(save_group_id, content_types=['new_chat_members'])
+
     @bot.message_handler(commands=['export'])
     @owner_only
     def export_notes(message):
@@ -147,10 +125,14 @@ def register_owner_commands(bot):
     @bot.message_handler(content_types=['document'])
     def import_notes(message):
         """Imports a new notes file for the group when uploaded via /import."""
-        file_name = message.document.file_name
+        # Simple check if this is a reply to the import command could be added, 
+        # but for now we trust the user knows what they are doing or we check file name closely.
+        if not message.document.file_name.endswith(".json"):
+             # Ignore non-json files or logging
+             return
 
-        if not file_name.endswith(".json"):
-            bot.reply_to(message, "⚠️ Only `.json` files are allowed for import.")
+        # Ideally, we should check if the user is owner/admin before accepting override
+        if not is_admin(message.chat.id, message.from_user.id):
             return
 
         file_id = message.document.file_id
@@ -165,30 +147,27 @@ def register_owner_commands(bot):
             with open(notes_file, "wb") as file:
                 file.write(downloaded_file)
 
-            # Reload notes after import
+            # Reload notes after import (optional if load_notes reads from file every time)
             load_notes(chat_id)
             bot.reply_to(message, f"✅ Notes imported successfully for group {chat_id}!")
         except Exception as e:
             bot.reply_to(message, f"❌ Error importing notes: {e}")
 
     @bot.message_handler(commands=['broadcast'])
-    # ✅ Broadcast Message with Optional Header
     def broadcast(message):
       """Broadcasts a message to all groups with an optional flag to remove header."""
-      text = message.text.replace("/broadcast", "").strip()
-      chat_id = message.chat.id
-      user_id = message.from_user.id
-      if not is_admin(chat_id, user_id):
-        bot.reply_to(message, "🚫 Only admins can use this command!")
+      # Check owner inside
+      if message.from_user.id != OWNER_ID:
+        bot.reply_to(message, "🚫 Only owner can use this command!")
         return
-    
+        
+      text = message.text.replace("/broadcast", "").strip()
       if not text:
         bot.reply_to(message, "📢 Please provide a message to broadcast.")
         return
     
-      remove_header = False
-      if "--no-header" in text:
-        remove_header = True
+      remove_header = "--no-header" in text
+      if remove_header:
         text = text.replace("--no-header", "").strip()
     
       try:
@@ -200,43 +179,61 @@ def register_owner_commands(bot):
             return
         
         for group_id in group_ids:
+            gid = group_id.strip()
+            if not gid: continue
             try:
                 broadcast_text = text if remove_header else f"📢 Broadcast from the owner:\n\n{text}"
-                bot.send_message(group_id.strip(), broadcast_text)
-                logging.info(f"Broadcast sent to {group_id.strip()}")
+                bot.send_message(gid, broadcast_text)
             except Exception as e:
-                logging.error(f"Failed to send to {group_id.strip()}: {e}")
+                logging.error(f"Failed to send to {gid}: {e}")
 
         bot.reply_to(message, "✅ Broadcast sent successfully!")
       except FileNotFoundError:
-        bot.reply_to(message, "🚫 `groups.txt` not found. Add groups first.")
+        bot.reply_to(message, "🚫 `groups.txt` not found.")
 
     @bot.message_handler(commands=['restart'])
     @owner_only
     def restart_bot(message):
         bot.reply_to(message, "♻️ Restarting bot...")
         logging.info("Bot is restarting...")
+        # Start new process then exit
         os.execv(sys.executable, ['python3'] + sys.argv)
 
     @bot.message_handler(commands=['logs'])
     @owner_only
     def fetch_logs(message):
         try:
-            with open("bot.log", "r") as log_file:
-                logs = log_file.readlines()[-10:]  # Get last 10 log lines
-            bot.reply_to(message, f"📜 Last 10 log entries:\n\n" + "".join(logs))
+            log_path = os.path.join(os.path.dirname(BASE_DIR), "bot.log") # Assuming log in root
+            if not os.path.exists(log_path):
+                 log_path = "bot.log"
+                 
+            with open(log_path, "r") as log_file:
+                logs = log_file.readlines()[-15:]  # Get last 15 log lines
+            
+            # chunking if needed
+            msg = "📜 Last logs:\n\n" + "".join(logs)
+            if len(msg) > 4000: msg = msg[-4000:]
+            bot.reply_to(message, msg)
         except Exception as e:
-            logging.error(f"Error reading logs: {e}")
             bot.reply_to(message, f"❌ Error reading logs: {e}")
     
     @bot.message_handler(commands=['register'])
     def register_group(message):
         chat_id = str(message.chat.id)
-        with open("bot/groups.txt", "a") as file:
-            if chat_id not in open("bot/groups.txt").read():
-                file.write(f"{chat_id}\n")
-        bot.reply_to(message, "✅ This group has been registered successfully!")
+        # Append only if not exists
+        try:
+            lines = []
+            if os.path.exists(GROUPS_FILE):
+                with open(GROUPS_FILE, "r") as f: lines = f.read().splitlines()
+            
+            if chat_id not in lines:
+                with open(GROUPS_FILE, "a") as file:
+                    file.write(f"{chat_id}\n")
+                bot.reply_to(message, "✅ This group has been registered successfully!")
+            else:
+                bot.reply_to(message, "✅ Already registered.")
+        except Exception as e:
+            bot.reply_to(message, f"Error: {e}")
 
-# ✅ Fetch groups when the bot starts
-fetch_existing_groups()
+# ✅ Initialize Scheduler
 start_ai_quote_scheduler()
