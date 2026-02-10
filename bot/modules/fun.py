@@ -2,8 +2,9 @@ import json
 import random
 import time
 import os
-from config import BASE_DIR, FUN_FILE
+from config import BASE_DIR, FUN_FILE, MEMORY_LIMIT
 from core.ai_response import get_ai_reply
+import core.memory as memory
 
 # ——— Rate‑Limit Tracker & Config —————————————————————————
 rate_limit_tracker = {}
@@ -82,6 +83,19 @@ def register_fun_handlers(bot):
             
         bot.send_message(chat_id, f"{mention}, {text}", parse_mode="HTML")
 
+        # Save to memory
+        try:
+            is_private = message.chat.type == "private"
+            mem_list = memory.chat_memory.get(user_id if is_private else None, chat_id, message.chat.type, [])
+            mem_list.append({"role": "user", "content": f"{message.from_user.first_name}: /roast {target_name}"})
+            mem_list.append({"role": "assistant", "content": text})
+            
+            key = (user_id, None, "private") if is_private else (None, chat_id, message.chat.type)
+            memory.chat_memory[key] = mem_list[-MEMORY_LIMIT:]
+            memory.save_memory()
+        except Exception as e:
+            print(f"Error saving roast memory: {e}")
+
     @bot.message_handler(commands=['motivate'])
     def motivate_cmd(message):
         chat_id = message.chat.id
@@ -111,5 +125,18 @@ def register_fun_handlers(bot):
             mention = f'<a href="tg://user?id={target.id}">{target_name}</a>'
 
         bot.send_message(chat_id, f"{mention}, {text}", parse_mode="HTML")
+
+        # Save to memory
+        try:
+            is_private = message.chat.type == "private"
+            mem_list = memory.chat_memory.get(user_id if is_private else None, chat_id, message.chat.type, [])
+            mem_list.append({"role": "user", "content": f"{message.from_user.first_name}: /motivate {target_name}"})
+            mem_list.append({"role": "assistant", "content": text})
+            
+            key = (user_id, None, "private") if is_private else (None, chat_id, message.chat.type)
+            memory.chat_memory[key] = mem_list[-MEMORY_LIMIT:]
+            memory.save_memory()
+        except Exception as e:
+            print(f"Error saving motivate memory: {e}")
 
     print("✅ Fun handlers registered.")
