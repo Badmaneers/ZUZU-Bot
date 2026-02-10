@@ -5,7 +5,7 @@ from bot_instance import bot
 from config import BOT_TOKEN, OWNER_ID
 from ai_response import process_ai_response
 from fortune import fortune
-from moderations import greet_new_member, moderation_commands, auto_moderate
+from moderations import register_moderation_handlers, auto_moderate
 from fun import register_fun_handlers
 from owner import register_owner_commands, fetch_existing_groups
 from notes import register_notes_handlers
@@ -58,8 +58,13 @@ def help_message(message):
         "<b>🔨 Moderation Commands:</b>\n"
         "/warn - To warn users 👹\n"
         "/ban - Remove someone from the group 💥\n"
-        "/mute - Shut someone's mouth 🤐\n"
-        "/unmute - Open someone's mouth again 👄\n\n"
+        "/kick - Kick user (can rejoin) 👢\n"
+        "/mute [min] - Mute user (default 5m) 🤐\n"
+        "/unmute - Unmute user 🗣️\n"
+        "/pin - Pin a message 📌\n"
+        "/purge [num] - Delete messages 🗑️\n"
+        "/welcome on/off - Toggle welcome msg 👋\n"
+        "/setwelcome [msg] - Set custom welcome 📝\n\n"
         "<b>📜 Notes Commands:</b>\n"
         "/save &lt;title&gt; &lt;content&gt; - Save a note 💾\n"
         "/delnote &lt;title&gt; - Delete a note ❌\n"
@@ -81,11 +86,10 @@ def help_message(message):
 register_fun_handlers(bot)
 register_notes_handlers(bot)
 register_owner_commands(bot)
+register_moderation_handlers(bot)
 
 # Specific commands that were exported as functions
 bot.register_message_handler(fortune, commands=['fortune'])
-bot.register_message_handler(moderation_commands, commands=['mute', 'unmute', 'warn', 'ban'])
-bot.register_message_handler(greet_new_member, content_types=['new_chat_members'])
 
 @bot.message_handler(commands=["imagine"])
 def handle_imagine(message):
