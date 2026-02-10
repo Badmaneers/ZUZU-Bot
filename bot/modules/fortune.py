@@ -18,14 +18,20 @@ client = OpenAI(
 # Magic fortune using AI
 def fortune(message):
     question = message.text.replace("/fortune", "").strip()
-
+    
+    # Handle replies: if replying to someone, predict their fortune
+    if message.reply_to_message:
+        target_name = message.reply_to_message.from_user.first_name
+        if not question:
+            question = f"Tell me the fortune of {target_name}."
+    
     if not question:
-        bot.reply_to(message, "Ask me a question, babe! 😏")
+        bot.reply_to(message, "Ask me a question, babe! Or reply to someone to read their fortune. 😏")
         return
     
     response = client.chat.completions.create(
         model=AI_MODEL,
-        messages=[{"role": "system", "content": "You are a fortune teller"},
+        messages=[{"role": "system", "content": "You are a sassy fortune teller. Predict the future."},
                   {"role": "user", "content": question}]
     )
     answer = response.choices[0].message.content.strip()
