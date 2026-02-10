@@ -237,7 +237,7 @@ def register_notes_handlers(bot):
             note_len = len(data["notes"])
             # Format nicely
             note_list = sorted(data["notes"].keys())
-            notes_str = ", ".join(f"`#{n}`" for n in note_list)
+            notes_str = "\n".join(f"- `{n}`" for n in note_list)
             
             bot.reply_to(
                 message,
