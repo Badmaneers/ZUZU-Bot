@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZUZU Bot Admin</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-robot"></i>
+                <span>ZUZU Admin</span>
+            </div>
+            
+            <ul class="nav-links">
+                <li class="active" onclick="switchTab('dashboard')">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard
+                </li>
+                <li onclick="switchTab('logs')">
+                    <i class="fa-solid fa-terminal"></i> Live Logs
+                </li>
+                <li onclick="switchTab('prompt')">
+                    <i class="fa-solid fa-brain"></i> AI Prompt
+                </li>
+                <li onclick="switchTab('badwords')">
+                    <i class="fa-solid fa-filter"></i> Bad Words
+                </li>
+                <li onclick="switchTab('fun')">
+                    <i class="fa-solid fa-masks-theater"></i> Fun & Roasts
+                </li>
+            </ul>
+            
+            <div class="status-indicator">
+                <span class="dot"></span> Online
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="tab-content active">
+                <h1>Overview</h1>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="icon"><i class="fa-solid fa-users"></i></div>
+                        <div class="info">
+                            <h3>Active Groups</h3>
+                            <p id="group-count">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon"><i class="fa-solid fa-server"></i></div>
+                        <div class="info">
+                            <h3>Status</h3>
+                            <p>Running</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Tab -->
+            <div id="tab-logs" class="tab-content">
+                <div class="header-row">
+                    <h1>System Logs</h1>
+                    <button onclick="fetchLogs()" class="btn-refresh"><i class="fa-solid fa-sync"></i> Refresh</button>
+                </div>
+                <div class="log-console" id="log-container">
+                    <!-- Logs injected here -->
+                </div>
+            </div>
+
+            <!-- AI Prompt Tab -->
+            <div id="tab-prompt" class="tab-content">
+                <div class="header-row">
+                    <h1>AI Personality Prompt</h1>
+                    <button onclick="savePrompt()" class="btn-save"><i class="fa-solid fa-save"></i> Save Changes</button>
+                </div>
+                <textarea id="prompt-editor" spellcheck="false"></textarea>
+            </div>
+
+            <!-- Badwords Tab -->
+            <div id="tab-badwords" class="tab-content">
+                <div class="header-row">
+                    <h1>Global Bad Words</h1>
+                    <button onclick="saveBadwords()" class="btn-save"><i class="fa-solid fa-save"></i> Save Changes</button>
+                </div>
+                <p class="hint">One word per line or comma separated.</p>
+                <textarea id="badwords-editor" spellcheck="false"></textarea>
+            </div>
+
+            <!-- Fun Tab -->
+            <div id="tab-fun" class="tab-content">
+                <div class="header-row">
+                    <h1>Fun Responses</h1>
+                    <button onclick="saveFun()" class="btn-save"><i class="fa-solid fa-save"></i> Save JSON</button>
+                </div>
+                <div class="split-view">
+                    <div class="editor-section">
+                        <h3>Roasts</h3>
+                        <textarea id="roasts-editor"></textarea>
+                    </div>
+                    <div class="editor-section">
+                        <h3>Motivations</h3>
+                        <textarea id="motivations-editor"></textarea>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

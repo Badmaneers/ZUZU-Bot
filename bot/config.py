@@ -6,8 +6,9 @@ import logging
 load_dotenv()
 
 # Configure logging
+LOG_FILE = "bot.log"
 logging.basicConfig(
-    filename="bot.log",
+    filename=LOG_FILE,
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )

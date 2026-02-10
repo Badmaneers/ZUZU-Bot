@@ -10,16 +10,18 @@ from modules.fun import register_fun_handlers
 from modules.owner import register_owner_commands, fetch_existing_groups
 from modules.notes import register_notes_handlers
 import modules.image_gen as image_gen
+from modules.dashboard import dashboard_bp
 
 # --- Web server for keep-alive ---
 app = flask.Flask(__name__)
+app.register_blueprint(dashboard_bp)
 
 @app.route('/')
 def index():
-    return "Zuzu Bot is alive 💅"
+    return flask.redirect('/dashboard')
 
 def run_flask():
-    app.run(host="0.0.0.0", port=3000)
+    app.run(host="0.0.0.0", port=8080)
 
 # --- Basic Commands ---
 @bot.message_handler(commands=['start'])
