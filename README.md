@@ -42,12 +42,20 @@
 - `/tea` - Get the latest gossip ☕  
 - `/imagine` - Generate an image from your prompt 🎨  
 
+### 🛡️ **Web Dashboard & Supervisor**
+- **Admin Dashboard**: A secure web interface running on port 8080.
+- **Supervisor Mode**: Auto-restarts the bot if it crashes.
+- **Encrypted Memory Viewer**: View and edit chat history securely.
+- **Memory Manipulation**: Create, Edit, and Delete AI memories directly from the dashboard.
+- **Fernet Encryption**: All chat logs are AES-encrypted for privacy.
+
 ---
 
 ## 🛠 **Installation & Setup**
 ### **1️⃣ Get the Required API Keys**
 - **Telegram Bot API Token**: Create a bot via [@BotFather](https://t.me/BotFather).
 - **AI API Key**: Register for [OpenRouter API](https://openrouter.ai/) for AI responses.
+- **Admin Password**: Choose a strong password for your dashboard.
 
 ### **2️⃣ Clone & Install Dependencies**
 ```sh
@@ -61,12 +69,21 @@ pip install -r requirements.txt
 BOT_TOKEN=your_telegram_bot_token
 OPENROUTER_API_KEY=your_ai_api_key
 OWNER_ID=your_telegram_user_id
+ADMIN_PASSWORD=your_dashboard_password
+MEMORY_ACCESS_PASSWORD=your_secondary_memory_password
+MEMORY_ENCRYPTION_KEY=your_fernet_key_generated_by_script
 ```
 
 ### **4️⃣ Run the Bot**
 ```sh
+# This script runs both the bot and the dashboard
 bash run.sh
 ```
+
+### 🖥️ **Accessing the Dashboard**
+1. Open your browser and go to `http://localhost:8080`.
+2. Login with your `ADMIN_PASSWORD`.
+3. To view or edit encrypted chat data, unlock the Memory tab with `MEMORY_ACCESS_PASSWORD`.
 
 ### 📌 General Commands
 | Command  | Description |
