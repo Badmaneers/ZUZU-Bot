@@ -62,6 +62,11 @@ def register_fun_handlers(bot):
             return bot.reply_to(message, f"🐢 Slow down! You get {config['max_usage']} roasts every {config['timeout']//60} min.")
 
         target = message.reply_to_message.from_user if message.reply_to_message else message.from_user
+        
+        # Prevent self-roast
+        if target.id == bot.get_me().id:
+            return bot.reply_to(message, "Excuse me? I'm flawless, darling. I don't roast perfection. 💅")
+            
         target_name = target.first_name
 
         # Try AI first
@@ -105,6 +110,11 @@ def register_fun_handlers(bot):
             return bot.reply_to(message, f"🐢 Slow down! You get {config['max_usage']} motivations every {config['timeout']//60} min.")
 
         target = message.reply_to_message.from_user if message.reply_to_message else message.from_user
+        
+        # Prevent self-motivation
+        if target.id == bot.get_me().id:
+            return bot.reply_to(message, "I am already the main character, honey. I don't need motivation, I AM the motivation. ✨")
+
         target_name = target.first_name
 
         # Try AI first
