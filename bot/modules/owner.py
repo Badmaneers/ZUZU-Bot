@@ -56,41 +56,7 @@ def owner_only(func):
             bot.reply_to(message, "🚫 You don’t have permission to use this command!")
     return wrapper
 
-# ✅ Send AI-Generated Quotes to All Groups
-def send_ai_generated_quote():
-    """Send AI-generated motivation/roast to all registered groups."""
-    try:
-        with open(GROUPS_FILE, "r") as file:
-            group_ids = [line.strip() for line in file.readlines()]
-        
-        if not group_ids:
-            return
-        
-        prompt = "Give me an original motivational quote or a savage roast."
-        
-        for group_id in group_ids:
-            if not group_id: continue
-            try:
-                # Use the direct method with group_id and message_text parameters
-                process_ai_response(None, group_id, prompt)
-                logging.info(f"AI quote request sent to group {group_id}")
-            except Exception as e:
-                logging.error(f"Failed to send AI quote to group {group_id}: {e}")
-                
-    except Exception as e:
-        logging.error(f"Error sending AI-generated messages: {e}")
 
-# ✅ Schedule AI Messages Automatically
-def schedule_ai_quotes():
-    while True:
-        sleep_time = random.randint(3*60*60, 24*60*60)
-        send_ai_generated_quote()
-        time.sleep(sleep_time)
-
-def start_ai_quote_scheduler():
-    thread = threading.Thread(target=schedule_ai_quotes)
-    thread.daemon = True
-    thread.start()
 
 # ✅ Register All Owner Commands
 def register_owner_commands(bot):
@@ -245,5 +211,6 @@ def register_owner_commands(bot):
         except Exception as e:
             bot.reply_to(message, f"Error: {e}")
 
-# ✅ Initialize Scheduler
-start_ai_quote_scheduler()
+# ✅ Scheduler Removed (Disabled)
+# def start_ai_quote_scheduler():
+#    pass
