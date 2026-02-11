@@ -73,7 +73,7 @@ def register_fun_handlers(bot):
         ai_text = None
         try:
             bot.send_chat_action(chat_id, "typing")
-            ai_text = get_ai_reply(ROAST_SYSTEM, f"Roast this person named {target_name}.")
+            ai_text = get_ai_reply(ROAST_SYSTEM, f"Roast this person named {target_name}.", max_tokens=300)
         except:
             pass
 
@@ -122,7 +122,7 @@ def register_fun_handlers(bot):
         ai_text = None
         try:
             bot.send_chat_action(chat_id, "typing")
-            ai_text = get_ai_reply(MOTIVATE_SYSTEM, f"Motivate this person named {target_name}.")
+            ai_text = get_ai_reply(MOTIVATE_SYSTEM, f"Motivate this person named {target_name}.", max_tokens=300)
         except:
             pass
 
