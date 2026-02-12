@@ -35,11 +35,22 @@ def get_stats():
         group_count = 0
     return {"groups": group_count}
 
+def get_current_env_value(key, default=None):
+    """Refreshes and gets a value from .env file directly"""
+    try:
+        env_dict = dotenv_values(os.path.join(ROOT_DIR, '.env'))
+        return env_dict.get(key, default)
+    except:
+        return default
+
 @dashboard_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         password = request.form.get('password')
-        if password == ADMIN_PASSWORD:
+        # Dynamic check
+        current_admin_password = get_current_env_value("ADMIN_PASSWORD", ADMIN_PASSWORD)
+        
+        if password == current_admin_password:
             session['logged_in'] = True
             return redirect(url_for('dashboard.dashboard'))
         else:
@@ -124,7 +135,11 @@ def memory_auth():
     """Verify separate password for memory access"""
     data = request.json
     pwd = data.get('password')
-    if pwd == MEMORY_ACCESS_PASSWORD:
+    
+    # Dynamic check
+    current_mem_password = get_current_env_value("MEMORY_ACCESS_PASSWORD", MEMORY_ACCESS_PASSWORD)
+    
+    if pwd == current_mem_password:
         session['memory_unlocked'] = True
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Invalid password"}), 403
