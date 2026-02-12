@@ -4,3 +4,4 @@ pyTelegramBotAPI
 requests
 cryptography
 Flask
+psutil

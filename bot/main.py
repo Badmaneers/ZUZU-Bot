@@ -4,6 +4,7 @@ import subprocess
 import time
 import sys
 import logging
+import psutil
 from config import FLASK_SECRET_KEY, BASE_DIR
 from modules.dashboard import dashboard_bp, login_required
 
@@ -94,6 +95,30 @@ def api_start():
     SHOULD_RESTART = True
     threading.Thread(target=start_bot_worker).start()
     return flask.jsonify({"success": True, "message": "Bot start signal sent."})
+
+@app.route('/api/stats/system')
+@login_required
+def api_stats_system():
+    global BOT_PROCESS
+    cpu_percent = 0.0
+    memory_percent = 0.0
+    
+    if BOT_PROCESS and BOT_PROCESS.poll() is None:
+        try:
+            proc = psutil.Process(BOT_PROCESS.pid)
+            # interval=None is non-blocking, but first call usually 0.0
+            # Dividing by cpu_count to normalize 
+            cpu_percent = proc.cpu_percent(interval=None) / psutil.cpu_count()
+            
+            # Memory percent
+            memory_percent = proc.memory_percent()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+            
+    return flask.jsonify({
+        "cpu": cpu_percent,
+        "memory_percent": memory_percent
+    })
 
 def run_flask():
     app.run(host="0.0.0.0", port=8080)

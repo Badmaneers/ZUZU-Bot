@@ -92,6 +92,21 @@
                         </div>
                     </div>
                 </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                    <div class="stat-graph-card" style="background:var(--bg-card); padding:1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                        <h3 style="margin-bottom:0.5rem; color:var(--text-secondary); font-size:1rem;">Memory Activity (30 Days)</h3>
+                        <div style="position: relative; height: 250px; width: 100%;">
+                            <canvas id="memoryRangeGraph"></canvas>
+                        </div>
+                    </div>
+                    <div class="stat-graph-card" style="background:var(--bg-card); padding:1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                        <h3 style="margin-bottom:0.5rem; color:var(--text-secondary); font-size:1rem;">System Resources (Live)</h3>
+                        <div style="position: relative; height: 250px; width: 100%;">
+                            <canvas id="systemGraph"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Logs Tab -->
@@ -212,6 +227,7 @@
         </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/script.js"></script>
 </body>
 </html>

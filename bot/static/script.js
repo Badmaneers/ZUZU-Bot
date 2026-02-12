@@ -503,3 +503,109 @@ async function startBot() {
         alert("Request failed: " + e);
     }
 }
+
+// --- Live Graphs ---
+let liveGraphInterval = null;
+let systemChart = null;
+
+async function loadMemoryRangeGraph() {
+    try {
+        const res = await fetch('/api/memory/range-stats');
+        const data = await res.json();
+        const el = document.getElementById('memoryRangeGraph');
+        if (!el) return;
+        
+        const ctx = el.getContext('2d');
+        if (window.memoryRangeChart) window.memoryRangeChart.destroy();
+        
+        window.memoryRangeChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Messages',
+                    data: data.counts,
+                    borderColor: 'rgba(139,92,246,1)',
+                    backgroundColor: 'rgba(139,92,246,0.2)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 2,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+    } catch(e) { console.error("Error loading memory graph:", e); }
+}
+
+async function updateSystemGraph() {
+    try {
+        const res = await fetch('/api/stats/system');
+        const data = await res.json();
+        const el = document.getElementById('systemGraph');
+        if (!el) return;
+
+        if (!systemChart) {
+             const ctx = el.getContext('2d');
+             systemChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(30).fill(''),
+                    datasets: [
+                        { label: 'CPU %', data: Array(30).fill(0), borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.4, pointRadius: 0, fill: true },
+                        { label: 'RAM %', data: Array(30).fill(0), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, pointRadius: 0, fill: true }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    scales: { 
+                        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        x: { display: false }
+                    }
+                }
+             });
+        }
+
+        // Update Data
+        const chartData = systemChart.data;
+        chartData.datasets[0].data.push(data.cpu);
+        chartData.datasets[0].data.shift();
+        
+        chartData.datasets[1].data.push(data.memory_percent);
+        chartData.datasets[1].data.shift();
+        
+        systemChart.update();
+        
+    } catch(e) { console.error("Error updating system graph:", e); }
+}
+
+function startLiveGraphs() {
+    loadMemoryRangeGraph(); // Load once
+    // Update system graph every 2 seconds
+    liveGraphInterval = setInterval(() => {
+        updateSystemGraph();
+    }, 2000);
+}
+
+// Hook into DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait for Chart.js to load if script is async
+    const checkChart = setInterval(() => {
+        if (typeof Chart !== 'undefined') {
+            clearInterval(checkChart);
+            startLiveGraphs();
+        }
+    }, 100);
+    setTimeout(() => clearInterval(checkChart), 5000); // Stop checking after 5s
+});

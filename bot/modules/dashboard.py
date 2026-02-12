@@ -5,6 +5,7 @@ import logging
 from functools import wraps
 from config import DATA_DIR, STATE_DIR, ROOT_DIR, LOG_FILE, ADMIN_PASSWORD, MEMORY_ACCESS_PASSWORD
 import sqlite3
+import psutil
 from core.memory import CIPHER
 
 dashboard_bp = Blueprint('dashboard', __name__, template_folder='../templates', static_folder='../static')
@@ -59,6 +60,7 @@ def dashboard():
 @login_required
 def api_stats():
     return jsonify(get_stats())
+
 
 @dashboard_bp.route('/api/logs')
 @login_required
