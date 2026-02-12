@@ -120,8 +120,15 @@ def process_ai_response(message, group_id=None, message_text=None):
         else:
             chat_memory = memory.chat_memory.get(None, chat_id, chat_type, [])
 
+        # Get formatted timestamp
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
+
         # Add user message
-        chat_memory.append({"role": "user", "content": f"{user_name}: {clean_text}"})
+        chat_memory.append({
+            "role": "user", 
+            "content": f"{user_name}: {clean_text}",
+            "timestamp": timestamp
+        })
 
         # Personalize system prompt for DMs
         system_message = system_prompt
@@ -141,7 +148,11 @@ def process_ai_response(message, group_id=None, message_text=None):
 
                 if response.choices:
                     ai_reply = response.choices[0].message.content.strip()
-                    chat_memory.append({"role": "assistant", "content": ai_reply})
+                    chat_memory.append({
+                        "role": "assistant", 
+                        "content": ai_reply,
+                        "timestamp": time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
+                    })
 
                     if is_private:
                         memory.chat_memory[(user_id, None, "private")] = chat_memory[-MEMORY_LIMIT:]

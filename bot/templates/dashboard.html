@@ -131,7 +131,7 @@
             <div id="tab-memory" class="tab-content">
                 <div class="header-row">
                     <h1>Encrypted Memory Viewer</h1>
-                    <div style="display:flex; gap:0.5rem;">
+                    <div id="memory-controls" style="display:none; gap:0.5rem;">
                         <button onclick="refreshMemory()" class="btn-save" style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.1);"><i class="fa-solid fa-sync"></i> Refresh</button>
                         <button onclick="forceCommitMemory()" class="btn-save" style="background:var(--accent);"><i class="fa-solid fa-cloud-upload"></i> Force Persistence</button>
                     </div>
@@ -163,6 +163,7 @@
                         <div class="chat-header" style="padding:1rem; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
                             <span id="chat-header-title" style="font-weight:bold;">Select a chat</span>
                             <div id="memory-actions" style="display:none; gap:0.5rem;">
+                                <button onclick="deleteSelectedMessages()" class="btn-micro" style="background:#eab308; display:none;" id="btn-delete-selected"><i class="fa-solid fa-eraser"></i> Delete Selected</button>
                                 <button onclick="toggleEditMemory()" class="btn-micro"><i class="fa-solid fa-edit"></i> Edit</button>
                                 <button onclick="deleteMemory()" class="btn-micro" style="background:var(--danger);"><i class="fa-solid fa-trash"></i></button>
                             </div>
@@ -175,10 +176,20 @@
 
                         <!-- Edit Mode -->
                         <div id="memory-editor-container" style="display:none; flex:1; flex-direction:column; padding:1rem;">
-                            <textarea id="memory-json-editor" spellcheck="false" style="flex:1; width:100%; border:1px solid #444; background:#111; color:#0f0; font-family:monospace; padding:0.5rem;"></textarea>
-                            <div style="margin-top:0.5rem; display:flex; justify-content:flex-end; gap:0.5rem;">
-                                <button onclick="saveMemory()" style="background:var(--success); color:black;">Save Changes</button>
-                                <button onclick="toggleEditMemory()" style="background:#555;">Cancel</button>
+                            <div id="visual-editor-list" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:1rem; padding-bottom: 1rem;">
+                                <!-- Javascript will populate this -->
+                            </div>
+                            
+                            <div id="editor-pagination" style="display:flex; justify-content:center; align-items:center; gap:1rem; padding: 0.5rem 0; font-size: 0.9rem;">
+                                <!-- Pagination controls -->
+                            </div>
+
+                            <div style="margin-top:0.5rem; display:flex; justify-content:space-between; align-items:center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                                <button onclick="addEditorMessage()" style="background:var(--accent);"><i class="fa-solid fa-plus"></i> Add Message</button>
+                                <div style="display:flex; gap:0.5rem;">
+                                    <button onclick="saveMemory()" style="background:var(--success);">Save Changes</button>
+                                    <button onclick="toggleEditMemory()" style="background:#555;">Cancel</button>
+                                </div>
                             </div>
                         </div>
                      </div>

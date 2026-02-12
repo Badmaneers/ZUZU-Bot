@@ -356,22 +356,39 @@ button:hover {
 }
 
 .chat-bubble {
-    padding: 0.8rem;
-    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
     max-width: 80%;
+    line-height: 1.5;
     font-size: 0.95rem;
-    line-height: 1.4;
+    position: relative;
+    cursor: pointer; /* Click to select */
+    border: 2px solid transparent; /* Selection border */
+    transition: border-color 0.2s;
 }
+
+.chat-bubble:hover {
+    background-color: rgba(255,255,255,0.05);
+}
+
+.chat-bubble.selected {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+    background-color: rgba(139, 92, 246, 0.4) !important;
+}
+
 .chat-bubble.user {
-    align-self: flex-end;
-    background: var(--accent);
-    color: white;
-}
-.chat-bubble.assistant {
-    align-self: flex-start;
     background: #334155;
-    color: var(--text-primary);
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
 }
+
+.chat-bubble.assistant {
+    background: #475569;
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
+}
+
 .chat-bubble.system {
     align-self: center;
     background: rgba(239, 68, 68, 0.2);
@@ -431,4 +448,65 @@ button:hover {
 
 .memory-sidebar button:hover {
     background: var(--accent-hover);
+}
+
+/* Visual Editor Styles */
+.editor-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: background 0.2s;
+}
+
+.editor-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.editor-role-select {
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.editor-content-area {
+    width: 100%;
+    min-height: 38px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: var(--text-primary);
+    padding: 0.5rem;
+    resize: none;
+    font-family: inherit;
+    overflow-y: hidden;
+}
+
+.editor-content-area:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+.btn-delete-item {
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
+
+.btn-delete-item:hover {
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
 }
