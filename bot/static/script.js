@@ -438,14 +438,43 @@ async function checkStatus() {
     try {
         const res = await fetch('/api/control/status');
         const data = await res.json();
+        const startBtn = document.getElementById('btn-toggle-bot');
         const statusEl = document.getElementById('bot-status');
+
+        const isRunning = data.status === 'running';
+
+        // Update Status Text
         if(statusEl) {
             statusEl.innerText = data.status.toUpperCase();
-            statusEl.style.color = data.status === 'running' ? 'var(--success)' : 'var(--danger)';
+            statusEl.style.color = isRunning ? 'var(--success)' : 'var(--danger)';
         }
+
+        // Update Toggle Button
+        if (startBtn) {
+            if (isRunning) {
+                startBtn.style.background = 'rgba(239, 68, 68, 0.15)';
+                startBtn.style.color = 'var(--danger)';
+                startBtn.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                startBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Bot';
+                startBtn.onclick = stopBot;
+            } else {
+                startBtn.style.background = 'rgba(16, 185, 129, 0.15)';
+                startBtn.style.color = 'var(--success)';
+                startBtn.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                startBtn.innerHTML = '<i class="fa-solid fa-play"></i> Start Bot';
+                startBtn.onclick = startBot;
+            }
+        }
+
     } catch(e) {
         console.error("Status check failed", e);
     }
+}
+
+async function toggleBot() {
+    // This is just a placeholder, the button's onclick is updated dynamically
+    // But in case it hasn't loaded yet:
+    await checkStatus();
 }
 
 // Poll status every 5 seconds

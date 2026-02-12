@@ -71,26 +71,18 @@
                         </div>
                     </div>
                     <div class="stat-card" style="cursor:pointer;" onclick="restartBot()">
-                        <div class="icon" style="color:var(--danger); background:rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-power-off"></i></div>
+                        <div class="icon" style="color:var(--text-secondary); background:rgba(255, 255, 255, 0.1);"><i class="fa-solid fa-sync"></i></div>
                         <div class="info">
                             <h3>Control</h3>
                             <p style="font-size:1.2rem;">Restart Bot</p>
                         </div>
                     </div>
-                    <div class="stat-card" style="cursor:pointer; background:rgba(16,185,129,0.08);" onclick="startBot()">
-                        <div class="icon" style="color:var(--success); background:rgba(16,185,129,0.15);"><i class="fa-solid fa-play"></i></div>
-                        <div class="info">
-                            <h3>Start</h3>
-                            <p style="font-size:1.2rem;">Start Bot</p>
-                        </div>
-                    </div>
-                    <div class="stat-card" style="cursor:pointer; background:rgba(239,68,68,0.08);" onclick="stopBot()">
-                        <div class="icon" style="color:var(--danger); background:rgba(239,68,68,0.15);"><i class="fa-solid fa-stop"></i></div>
-                        <div class="info">
-                            <h3>Stop</h3>
-                            <p style="font-size:1.2rem;">Stop Bot</p>
-                        </div>
-                    </div>
+                </div>
+
+                <div class="stats-grid" style="margin-top: 1rem;">
+                    <button id="btn-toggle-bot" onclick="toggleBot()" style="width: 100%; padding: 1rem; border-radius: 12px; border: none; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s;">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Loading...
+                    </button>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
