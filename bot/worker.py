@@ -87,6 +87,14 @@ bot.register_message_handler(fortune, commands=['fortune'])
 def handle_imagine(message):
     image_gen.imagine(bot, message)
 
+@bot.message_handler(content_types=['sticker'])
+def handle_sticker(message):
+    bot.reply_to(message, "Nice sticker! But you’ll need more than that to impress me.")
+
+@bot.message_handler(content_types=['animation'])
+def handle_gif(message):
+    bot.reply_to(message, "A GIF? Classic move. Still not as funny as my comebacks!")
+
 # --- Fallback & Auto-Moderation ---
 # This handler catches all text messages to perform moderation AND AI response.
 @bot.message_handler(func=lambda message: message.text is not None)
