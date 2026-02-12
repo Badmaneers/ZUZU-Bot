@@ -700,3 +700,37 @@ async function saveSettings() {
         alert("Error saving: " + e);
     }
 }
+
+// Global Keyboard Shortcuts
+document.addEventListener('keydown', (e) => {
+    // Check for Ctrl+S or Cmd+S
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault(); // Stop browser from saving HTML file
+        
+        // Find active tab
+        const activeTab = document.querySelector('.tab-content.active');
+        if (!activeTab) return;
+        
+        switch(activeTab.id) {
+            case 'tab-prompt':
+                savePrompt();
+                break;
+            case 'tab-badwords':
+                saveBadwords();
+                break;
+            case 'tab-fun':
+                saveFun();
+                break;
+            case 'tab-settings':
+                saveSettings();
+                break;
+            case 'tab-memory':
+                // Only save if the editor container is visible/active
+                const editor = document.getElementById('memory-editor-container');
+                if (editor && editor.style.display !== 'none' && editor.offsetParent !== null) {
+                    saveMemory();
+                }
+                break;
+        }
+    }
+});
