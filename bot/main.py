@@ -13,6 +13,17 @@ from modules.dashboard import dashboard_bp, login_required
 # Configure basic logging for Main Process
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - [SUPERVISOR] - %(message)s")
 
+# Filter out /api/logs requests
+class StatsFilter(logging.Filter):
+    def filter(self, record):
+        msg = record.getMessage()
+        # Hide polling endpoints
+        if "/api/stats" in msg or "/api/logs" in msg or "/api/control/status" in msg or "/api/memory/list" in msg:
+            return False
+        return True
+
+logging.getLogger("werkzeug").addFilter(StatsFilter())
+
 app = flask.Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 app.register_blueprint(dashboard_bp)
