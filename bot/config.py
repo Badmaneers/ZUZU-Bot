@@ -38,6 +38,9 @@ TOP_P = float(get_env("AI_TOP_P", default="0.9"))
 MAX_RETRIES = int(get_env("AI_MAX_RETRIES", default="3"))
 MEMORY_LIMIT = int(get_env("MEMORY_LIMIT", default="10"))
 
+# Web Configuration
+HOST_DOMAIN = get_env("HOST_DOMAIN", default=None)
+
 # Paths
 # BASE_DIR is now .../bot
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

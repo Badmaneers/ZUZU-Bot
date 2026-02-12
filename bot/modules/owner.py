@@ -10,7 +10,7 @@ import time
 import random
 from modules.moderations import is_admin
 from modules.notes import load_notes, save_notes_to_file
-from config import BASE_DIR, OWNER_ID, GROUPS_FILE, NOTES_DIR
+from config import BASE_DIR, OWNER_ID, GROUPS_FILE, NOTES_DIR, HOST_DOMAIN
 from core.bot_instance import bot
 
 # Ensure groups.txt exists
@@ -184,12 +184,18 @@ def register_owner_commands(bot):
     @owner_only
     def get_dashboard_url(message):
         """Sends the dashboard URL to the owner."""
-        try:
-            # Try to get public IP
-            ip = requests.get('https://api.ipify.org', timeout=5).text
-            url = f"http://{ip}:8080"
-        except Exception:
-            url = "http://YOUR_SERVER_IP:8080"
+        if HOST_DOMAIN:
+            if not HOST_DOMAIN.startswith("http"):
+                url = f"http://{HOST_DOMAIN}"
+            else:
+                url = HOST_DOMAIN
+        else:
+            try:
+                # Try to get public IP
+                ip = requests.get('https://api.ipify.org', timeout=5).text
+                url = f"http://{ip}:8080"
+            except Exception:
+                url = "http://YOUR_SERVER_IP:8080"
             
         bot.reply_to(message, f"🖥️ **Dashboard Access**\n\nURL: {url}\n\n_Note: Ensure port 8080 is open and accessible._", parse_mode="Markdown")
     
