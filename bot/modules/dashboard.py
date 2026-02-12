@@ -47,10 +47,10 @@ def get_current_env_value(key, default=None):
 def login():
     if request.method == 'POST':
         password = request.form.get('password')
-        # Dynamic check
+        # Dynamic check - allows login with either dynamic file value OR startup environment value
         current_admin_password = get_current_env_value("ADMIN_PASSWORD", ADMIN_PASSWORD)
         
-        if password == current_admin_password:
+        if password == current_admin_password or password == ADMIN_PASSWORD:
             session['logged_in'] = True
             return redirect(url_for('dashboard.dashboard'))
         else:
@@ -150,7 +150,7 @@ def memory_auth():
     # Dynamic check
     current_mem_password = get_current_env_value("MEMORY_ACCESS_PASSWORD", MEMORY_ACCESS_PASSWORD)
     
-    if pwd == current_mem_password:
+    if pwd == current_mem_password or pwd == MEMORY_ACCESS_PASSWORD:
         session['memory_unlocked'] = True
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Invalid password"}), 403
