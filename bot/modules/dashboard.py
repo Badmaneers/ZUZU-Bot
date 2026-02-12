@@ -86,6 +86,17 @@ def api_logs():
     except Exception as e:
         return jsonify({"error": str(e)})
 
+@dashboard_bp.route('/api/logs/clear', methods=['POST'])
+@login_required
+def clear_logs():
+    try:
+        if os.path.exists(LOG_PATH):
+            with open(LOG_PATH, 'w') as f:
+                f.write('')
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 @dashboard_bp.route('/api/data/<type>', methods=['GET', 'POST'])
 @login_required
 def api_data(type):

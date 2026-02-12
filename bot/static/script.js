@@ -701,36 +701,48 @@ async function saveSettings() {
     }
 }
 
-// Global Keyboard Shortcuts
-document.addEventListener('keydown', (e) => {
-    // Check for Ctrl+S or Cmd+S
-    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
-        e.preventDefault(); // Stop browser from saving HTML file
-        
-        // Find active tab
-        const activeTab = document.querySelector('.tab-content.active');
-        if (!activeTab) return;
-        
-        switch(activeTab.id) {
-            case 'tab-prompt':
-                savePrompt();
-                break;
-            case 'tab-badwords':
-                saveBadwords();
-                break;
-            case 'tab-fun':
-                saveFun();
-                break;
-            case 'tab-settings':
-                saveSettings();
-                break;
-            case 'tab-memory':
-                // Only save if the editor container is visible/active
-                const editor = document.getElementById('memory-editor-container');
-                if (editor && editor.style.display !== 'none' && editor.offsetParent !== null) {
-                    saveMemory();
-                }
-                break;
+// --- Logs ---
+let logsInterval = null;
+
+function startLogsAutoRefresh() {
+    if (logsInterval) clearInterval(logsInterval);
+    logsInterval = setInterval(() => {
+        // Only refresh if logs tab is active
+        const logsTab = document.getElementById('tab-logs');
+        if (logsTab && logsTab.classList.contains('active')) {
+            fetchLogs();
         }
+    }, 2000); // every 2 seconds
+}
+
+function stopLogsAutoRefresh() {
+    if (logsInterval) clearInterval(logsInterval);
+}
+
+// Hook into tab switching
+const origSwitchTab = switchTab;
+switchTab = function(tabId) {
+    origSwitchTab(tabId);
+    if (tabId === 'logs') {
+        fetchLogs();
+        startLogsAutoRefresh();
+    } else {
+        stopLogsAutoRefresh();
     }
-});
+}
+
+async function clearLogs() {
+    if (!confirm('Clear all logs? This cannot be undone.')) return;
+    try {
+        const res = await fetch('/api/logs/clear', {method: 'POST'});
+        const data = await res.json();
+        if (data.success) {
+            fetchLogs();
+            alert('Logs cleared.');
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (e) {
+        alert('Error clearing logs: ' + e);
+    }
+}
