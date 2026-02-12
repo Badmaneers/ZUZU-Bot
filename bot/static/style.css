@@ -1,3 +1,95 @@
+/* Custom Modal Styles */
+#custom-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+}
+
+#custom-modal.active {
+    display: flex;
+}
+
+#custom-modal .modal-box {
+    background: var(--bg-card);
+    padding: 2rem;
+    border-radius: 12px;
+    width: 400px;
+    max-width: 90vw;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+#custom-modal h3#modal-title {
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+#custom-modal p#modal-message {
+    margin-bottom: 1.5rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+#custom-modal #modal-input-container {
+    display: none;
+    margin-bottom: 1.5rem;
+}
+
+#custom-modal #modal-input {
+    width: 100%;
+    padding: 0.8rem;
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: white;
+}
+
+#custom-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+#custom-modal button {
+    min-width: 80px;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+#custom-modal #modal-btn-cancel {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-secondary);
+}
+
+#custom-modal #modal-btn-ok {
+    background: var(--accent);
+    color: white;
+}
+
+#custom-modal #modal-btn-ok:hover {
+    background: var(--accent-hover);
+}
 :root {
     --bg-dark: #0f172a;
     --bg-card: #1e293b;

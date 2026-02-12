@@ -47,7 +47,7 @@ async function savePrompt() {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({content})
     });
-    alert('Prompt saved!');
+    Modal.alert('Prompt saved!');
 }
 
 // Badwords Handles
@@ -64,7 +64,7 @@ async function saveBadwords() {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({content})
     });
-    alert('Badwords saved!');
+    Modal.alert('Badwords saved!');
 }
 
 // Fun Handles
@@ -85,9 +85,9 @@ async function saveFun() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({roasts, motivations})
         });
-        alert('Fun settings saved!');
+        Modal.alert('Fun settings saved!');
     } catch (e) {
-        alert('Invalid JSON! Please check your syntax.');
+        Modal.alert('Invalid JSON! Please check your syntax.');
     }
 }
 
@@ -107,7 +107,7 @@ async function unlockMemory() {
         document.getElementById('memory-controls').style.display = 'flex';
         loadMemoryList();
     } else {
-        alert('Incorrect Password');
+        Modal.alert('Incorrect Password');
     }
 }
 
@@ -205,50 +205,53 @@ function updateDeleteSelectedState() {
 
 async function deleteSelectedMessages() {
     if (selectedMessages.size === 0) return;
-    if (!confirm(`Delete ${selectedMessages.size} selected messages?`)) return;
+    Modal.confirm(`Delete ${selectedMessages.size} selected messages?`, async (ok) => {
+        if (!ok) return;
 
-    // Filter out messages where index is in selectedMessages
-    const newMessages = currentMessages.filter((_, index) => !selectedMessages.has(index));
-    
-    // Save updated list
-    try {
-        const res = await fetch('/api/memory/save', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({key: currentMemoryKey, messages: newMessages})
-        });
+        // Filter out messages where index is in selectedMessages
+        const newMessages = currentMessages.filter((_, index) => !selectedMessages.has(index));
         
-        const data = await res.json();
-        if (data.success) {
-            // Reload chat to reflect changes
-            loadMemoryChat(currentMemoryKey);
-        } else {
-            alert('Error deleting: ' + data.error);
+        // Save updated list
+        try {
+            const res = await fetch('/api/memory/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({key: currentMemoryKey, messages: newMessages})
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                // Reload chat to reflect changes
+                loadMemoryChat(currentMemoryKey);
+            } else {
+                Modal.alert('Error deleting: ' + data.error);
+            }
+        } catch (e) {
+            Modal.alert('Internal Error: ' + e);
         }
-    } catch (e) {
-        alert('Internal Error: ' + e);
-    }
+    });
 }
 
 
 function createNewMemory() {
-    const key = prompt("Enter new Group ID or Unique Key (e.g. -100123456789):");
-    if (!key) return;
-    
-    currentMemoryKey = key;
-    document.getElementById('chat-header-title').innerText = key + " (New)";
-    document.getElementById('chat-messages').style.display = 'none';
-    document.getElementById('memory-editor-container').style.display = 'flex';
-    document.getElementById('memory-actions').style.display = 'none'; // Hide delete until saved
-    
-    // Default template
-    const timeNow = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    currentMessages = [
-        {"role": "system", "content": "You are ZUZU Bot.", "timestamp": timeNow},
-        {"role": "user", "content": "Hello!", "timestamp": timeNow},
-        {"role": "assistant", "content": "Hi there! How can I help?", "timestamp": timeNow}
-    ];
-    renderEditorList();
+    Modal.prompt("Enter new Group ID or Unique Key (e.g. -100123456789):", (key) => {
+        if (!key) return;
+        
+        currentMemoryKey = key;
+        document.getElementById('chat-header-title').innerText = key + " (New)";
+        document.getElementById('chat-messages').style.display = 'none';
+        document.getElementById('memory-editor-container').style.display = 'flex';
+        document.getElementById('memory-actions').style.display = 'none'; // Hide delete until saved
+        
+        // Default template
+        const timeNow = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        currentMessages = [
+            {"role": "system", "content": "You are ZUZU Bot.", "timestamp": timeNow},
+            {"role": "user", "content": "Hello!", "timestamp": timeNow},
+            {"role": "assistant", "content": "Hi there! How can I help?", "timestamp": timeNow}
+        ];
+        renderEditorList();
+    });
 }
 
 function toggleEditMemory() {
@@ -362,7 +365,7 @@ async function saveMemory() {
     try {
         // currentMessages is now directly updated by the visual inputs
         if (!currentMemoryKey) {
-            alert("Error: No key selected");
+            Modal.alert("Error: No key selected");
             return;
         }
         
@@ -374,40 +377,42 @@ async function saveMemory() {
         
         const data = await res.json();
         if (data.success) {
-            alert('Memory saved successfully!');
+            Modal.alert('Memory saved successfully!');
             loadMemoryList();
             loadMemoryChat(currentMemoryKey); // Refresh view
         } else {
-            alert('Error saving: ' + data.error);
+            Modal.alert('Error saving: ' + data.error);
         }
     } catch (e) {
-        alert('Internal Error: ' + e);
+        Modal.alert('Internal Error: ' + e);
     }
 }
 
 async function deleteMemory() {
     if (!currentMemoryKey) return;
-    if (!confirm(`Are you sure you want to delete memory for: ${currentMemoryKey}? This cannot be undone.`)) return;
+    Modal.confirm(`Are you sure you want to delete memory for: ${currentMemoryKey}? This cannot be undone.`, async (ok) => {
+        if (!ok) return;
     
-    const res = await fetch('/api/memory/delete', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({key: currentMemoryKey})
+        const res = await fetch('/api/memory/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({key: currentMemoryKey})
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            Modal.alert('Memory deleted.');
+            document.getElementById('chat-header-title').innerText = "Select a chat";
+            document.getElementById('chat-messages').innerHTML = '';
+            document.getElementById('memory-actions').style.display = 'none';
+            document.getElementById('memory-editor-container').style.display = 'none';
+            document.getElementById('chat-messages').style.display = 'flex';
+            currentMemoryKey = null;
+            loadMemoryList();
+        } else {
+            Modal.alert('Error deleting: ' + data.error);
+        }
     });
-    
-    const data = await res.json();
-    if (data.success) {
-        alert('Memory deleted.');
-        document.getElementById('chat-header-title').innerText = "Select a chat";
-        document.getElementById('chat-messages').innerHTML = '';
-        document.getElementById('memory-actions').style.display = 'none';
-        document.getElementById('memory-editor-container').style.display = 'none';
-        document.getElementById('chat-messages').style.display = 'flex';
-        currentMemoryKey = null;
-        loadMemoryList();
-    } else {
-        alert('Error deleting: ' + data.error);
-    }
 }
 
 
@@ -419,20 +424,22 @@ function showLockScreen() {
 
 // --- Control Functions ---
 async function restartBot() {
-    if(!confirm("Are you sure you want to restart the bot process?")) return;
-    
-    try {
-        const res = await fetch('/api/control/restart', {method: 'POST'});
-        const data = await res.json();
-        if(data.success) {
-            alert("Restart signal sent. Bot should reboot in a few seconds.");
-            checkStatus();
-        } else {
-            alert("Error: " + data.message);
+    Modal.confirm("Are you sure you want to restart the bot process?", async (ok) => {
+        if (!ok) return;
+
+        try {
+            const res = await fetch('/api/control/restart', {method: 'POST'});
+            const data = await res.json();
+            if(data.success) {
+                Modal.alert("Restart signal sent. Bot should reboot in a few seconds.");
+                checkStatus();
+            } else {
+                Modal.alert("Error: " + data.message);
+            }
+        } catch(e) {
+            Modal.alert("Request failed: " + e);
         }
-    } catch(e) {
-        alert("Request failed: " + e);
-    }
+    });
 }
 
 async function checkStatus() {
@@ -482,18 +489,20 @@ async function toggleBot() {
 setInterval(checkStatus, 5000);
 
 async function forceCommitMemory() {
-    if (!confirm("Are you sure you want to force save all memory from cache to disk? This might be needed if the bot is running but data isn't showing up yet.")) return;
-    try {
-        const res = await fetch('/api/memory/commit', {method: 'POST'});
-        const data = await res.json();
-        if(data.success) {
-            alert(data.message);
-        } else {
-            alert("Error: " + data.error);
+    Modal.confirm("Are you sure you want to force save all memory from cache to disk? This might be needed if the bot is running but data isn't showing up yet.", async (ok) => {
+        if (!ok) return;
+        try {
+            const res = await fetch('/api/memory/commit', {method: 'POST'});
+            const data = await res.json();
+            if(data.success) {
+                Modal.alert(data.message);
+            } else {
+                Modal.alert("Error: " + data.error);
+            }
+        } catch(e) {
+            Modal.alert("Request failed: " + e);
         }
-    } catch(e) {
-        alert("Request failed: " + e);
-    }
+    });
 }
 
 async function refreshMemory() {
@@ -504,19 +513,22 @@ async function refreshMemory() {
 }
 
 async function stopBot() {
-    if(!confirm("Are you sure you want to stop the bot process?")) return;
-    try {
-        const res = await fetch('/api/control/stop', {method: 'POST'});
-        const data = await res.json();
-        if(data.success) {
-            alert("Bot stopped.");
-            checkStatus();
-        } else {
-            alert("Error: " + data.message);
+    Modal.confirm("Are you sure you want to stop the bot process?", async (ok) => {
+        if(!ok) return;
+
+        try {
+            const res = await fetch('/api/control/stop', {method: 'POST'});
+            const data = await res.json();
+            if(data.success) {
+                Modal.alert("Bot stopped.");
+                checkStatus();
+            } else {
+                Modal.alert("Error: " + data.message);
+            }
+        } catch(e) {
+            Modal.alert("Request failed: " + e);
         }
-    } catch(e) {
-        alert("Request failed: " + e);
-    }
+    }); 
 }
 
 async function startBot() {
@@ -524,13 +536,13 @@ async function startBot() {
         const res = await fetch('/api/control/start', {method: 'POST'});
         const data = await res.json();
         if(data.success) {
-            alert("Bot start signal sent.");
+            Modal.alert("Bot start signal sent.");
             checkStatus();
         } else {
-            alert("Error: " + data.message);
+            Modal.alert("Error: " + data.message);
         }
     } catch(e) {
-        alert("Request failed: " + e);
+        Modal.alert("Request failed: " + e);
     }
 }
 
@@ -640,6 +652,68 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => clearInterval(checkChart), 5000); // Stop checking after 5s
 });
 
+// --- Custom Modal System ---
+const Modal = {
+    show: function(title, message, type = 'alert', callback = null) {
+        const modal = document.getElementById('custom-modal');
+        const titleEl = document.getElementById('modal-title');
+        const msgEl = document.getElementById('modal-message');
+        const inputContainer = document.getElementById('modal-input-container');
+        const inputEl = document.getElementById('modal-input');
+        const okBtn = document.getElementById('modal-btn-ok');
+        const cancelBtn = document.getElementById('modal-btn-cancel');
+
+        titleEl.innerText = title;
+        msgEl.innerText = message;
+        
+        // Reset state
+        inputContainer.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        inputEl.value = '';
+
+        // Configure based on type
+        if (type === 'confirm') {
+            cancelBtn.style.display = 'block';
+            okBtn.innerText = 'Yes';
+            cancelBtn.innerText = 'No';
+        } else if (type === 'prompt') {
+            cancelBtn.style.display = 'block';
+            inputContainer.style.display = 'block';
+            okBtn.innerText = 'Submit';
+            cancelBtn.innerText = 'Cancel';
+            setTimeout(() => inputEl.focus(), 100);
+        } else {
+            // Alert
+            okBtn.innerText = 'OK';
+        }
+
+        modal.style.display = 'flex';
+
+        // Handlers
+        const close = () => { modal.style.display = 'none'; };
+        
+        okBtn.onclick = () => {
+            close();
+            if (callback) {
+                if (type === 'prompt') callback(inputEl.value);
+                else callback(true);
+            }
+        };
+
+        cancelBtn.onclick = () => {
+            close();
+            if (callback && type !== 'alert') callback(false);
+        };
+        
+        if (type === 'prompt') {
+            inputEl.onkeydown = (e) => { if(e.key === 'Enter') okBtn.click(); };
+        }
+    },
+    alert: function(msg) { this.show('Message', msg, 'alert'); },
+    confirm: function(msg, callback) { this.show('Confirmation', msg, 'confirm', callback); },
+    prompt: function(msg, callback) { this.show('Input Required', msg, 'prompt', callback); }
+};
+
 // --- Settings ---
 async function loadSettings() {
     try {
@@ -652,7 +726,7 @@ async function loadSettings() {
             data.vars.forEach(v => addEnvRow(v.key, v.value));
         }
     } catch(e) {
-        alert("Error loading settings: " + e);
+        Modal.alert("Error loading settings: " + e);
     }
 }
 
@@ -674,31 +748,33 @@ function addEnvVar() {
 }
 
 async function saveSettings() {
-    if(!confirm("Saving changes will require a bot restart. Continue?")) return;
-    
-    const rows = document.querySelectorAll('#env-editor-container > div');
-    const vars = [];
-    rows.forEach(row => {
-        const key = row.querySelector('.env-key').value.trim();
-        const value = row.querySelector('.env-value').value.trim();
-        if(key) vars.push({key, value});
-    });
-    
-    try {
-        const res = await fetch('/api/env', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({vars})
+    Modal.confirm("Saving changes will require a bot restart. Continue?", async (ok) => {
+        if (!ok) return;
+        
+        const rows = document.querySelectorAll('#env-editor-container > div');
+        const vars = [];
+        rows.forEach(row => {
+            const key = row.querySelector('.env-key').value.trim();
+            const value = row.querySelector('.env-value').value.trim();
+            if(key) vars.push({key, value});
         });
-        const data = await res.json();
-        if(data.success) {
-            alert(data.message);
-        } else {
-            alert("Error: " + data.error);
+        
+        try {
+            const res = await fetch('/api/env', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({vars})
+            });
+            const data = await res.json();
+            if(data.success) {
+                Modal.alert(data.message);
+            } else {
+                Modal.alert("Error: " + data.error);
+            }
+        } catch(e) {
+            Modal.alert("Error saving: " + e);
         }
-    } catch(e) {
-        alert("Error saving: " + e);
-    }
+    });
 }
 
 // --- Logs ---
@@ -732,17 +808,19 @@ switchTab = function(tabId) {
 }
 
 async function clearLogs() {
-    if (!confirm('Clear all logs? This cannot be undone.')) return;
-    try {
-        const res = await fetch('/api/logs/clear', {method: 'POST'});
-        const data = await res.json();
-        if (data.success) {
-            fetchLogs();
-            alert('Logs cleared.');
-        } else {
-            alert('Error: ' + data.error);
+    Modal.confirm('Clear all logs? This cannot be undone.', async (confirmed) => {
+        if (!confirmed) return;
+        try {
+            const res = await fetch('/api/logs/clear', {method: 'POST'});
+            const data = await res.json();
+            if (data.success) {
+                fetchLogs();
+                Modal.alert('Logs cleared.');
+            } else {
+                Modal.alert('Error: ' + data.error);
+            }
+        } catch (e) {
+            Modal.alert('Error clearing logs: ' + e);
         }
-    } catch (e) {
-        alert('Error clearing logs: ' + e);
-    }
+    });
 }
