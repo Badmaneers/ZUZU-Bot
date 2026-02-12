@@ -16,6 +16,7 @@ function switchTab(tabId) {
     if (tabId === 'prompt') loadPrompt();
     if (tabId === 'badwords') loadBadwords();
     if (tabId === 'fun') loadFun();
+    if (tabId === 'settings') loadSettings();
 }
 
 async function fetchStats() {
@@ -638,3 +639,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
     setTimeout(() => clearInterval(checkChart), 5000); // Stop checking after 5s
 });
+
+// --- Settings ---
+async function loadSettings() {
+    try {
+        const res = await fetch('/api/env');
+        const data = await res.json();
+        const container = document.getElementById('env-editor-container');
+        container.innerHTML = '';
+        
+        if (data.vars) {
+            data.vars.forEach(v => addEnvRow(v.key, v.value));
+        }
+    } catch(e) {
+        alert("Error loading settings: " + e);
+    }
+}
+
+function addEnvRow(key, value) {
+    const container = document.getElementById('env-editor-container');
+    const div = document.createElement('div');
+    div.style.cssText = "display:flex; gap:1rem; align-items:center;";
+    div.innerHTML = `
+        <input type="text" placeholder="KEY" value="${key || ''}" class="env-key" style="flex:1; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:white; font-family:monospace;">
+        <span style="color:var(--text-secondary);">=</span>
+        <input type="text" placeholder="VALUE" value="${value || ''}" class="env-value" style="flex:2; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:white; font-family:monospace;">
+        <button onclick="this.parentElement.remove()" style="background:var(--danger); padding:0.8rem; aspect-ratio:1;"><i class="fa-solid fa-trash"></i></button>
+    `;
+    container.appendChild(div);
+}
+
+function addEnvVar() {
+    addEnvRow("", "");
+}
+
+async function saveSettings() {
+    if(!confirm("Saving changes will require a bot restart. Continue?")) return;
+    
+    const rows = document.querySelectorAll('#env-editor-container > div');
+    const vars = [];
+    rows.forEach(row => {
+        const key = row.querySelector('.env-key').value.trim();
+        const value = row.querySelector('.env-value').value.trim();
+        if(key) vars.push({key, value});
+    });
+    
+    try {
+        const res = await fetch('/api/env', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({vars})
+        });
+        const data = await res.json();
+        if(data.success) {
+            alert(data.message);
+        } else {
+            alert("Error: " + data.error);
+        }
+    } catch(e) {
+        alert("Error saving: " + e);
+    }
+}

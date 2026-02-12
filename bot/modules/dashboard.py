@@ -6,6 +6,7 @@ from functools import wraps
 from config import DATA_DIR, STATE_DIR, ROOT_DIR, LOG_FILE, ADMIN_PASSWORD, MEMORY_ACCESS_PASSWORD
 import sqlite3
 import psutil
+from dotenv import dotenv_values
 from core.memory import CIPHER
 
 dashboard_bp = Blueprint('dashboard', __name__, template_folder='../templates', static_folder='../static')
@@ -263,5 +264,51 @@ def memory_force_commit():
         # Or just a restart.
         
         return jsonify({"success": True, "message": "Changes saved to DB. Note: Active bot process may need restart to pick up external DB edits."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- Environment Settings Routes ---
+
+@dashboard_bp.route('/api/env', methods=['GET'])
+@login_required
+def get_env_vars():
+    """Read and parse .env file"""
+    try:
+        env_path = os.path.join(ROOT_DIR, '.env')
+        if not os.path.exists(env_path):
+            return jsonify({"vars": []})
+        
+        # Use python-dotenv to parse correctly
+        env_dict = dotenv_values(env_path)
+        vars = [{"key": k, "value": v} for k, v in env_dict.items()]
+        
+        return jsonify({"vars": vars})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@dashboard_bp.route('/api/env', methods=['POST'])
+@login_required
+def save_env_vars():
+    """Save variables to .env file"""
+    try:
+        data = request.json
+        vars = data.get('vars', [])
+        
+        env_path = os.path.join(ROOT_DIR, '.env')
+        with open(env_path, 'w') as f:
+            for item in vars:
+                key = item.get('key', '').strip()
+                value = item.get('value', '').strip()
+                if key:
+                    # Auto-quote if needed
+                    val_to_write = value
+                    if " " in val_to_write or "#" in val_to_write or "\n" in val_to_write or not val_to_write:
+                        # minimal escaping
+                        val_to_write = val_to_write.replace('"', '\\"')
+                        val_to_write = f'"{val_to_write}"'
+                        
+                    f.write(f"{key}={val_to_write}\n")
+        
+        return jsonify({"success": True, "message": "Settings saved. Restart bot to apply."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

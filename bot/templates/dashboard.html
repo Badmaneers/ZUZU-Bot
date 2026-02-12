@@ -36,6 +36,9 @@
                 <li onclick="switchTab('memory')">
                     <i class="fa-solid fa-database"></i> Encrypted Memory
                 </li>
+                <li onclick="switchTab('settings')">
+                     <i class="fa-solid fa-cog"></i> Settings
+                </li>
             </ul>
             
             <div class="status-indicator">
@@ -214,6 +217,25 @@
                             </div>
                         </div>
                      </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="tab-settings" class="tab-content">
+                <div class="header-row">
+                    <h1>Bot Configuration (.env)</h1>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button onclick="addEnvVar()" style="background:var(--accent);"><i class="fa-solid fa-plus"></i> Add Variable</button>
+                        <button onclick="saveSettings()" class="btn-save"><i class="fa-solid fa-save"></i> Save Changes</button>
+                    </div>
+                </div>
+                <div style="background:var(--bg-card); padding:1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-top:1rem;">
+                    <div style="margin-bottom:1rem; padding:0.5rem; background:rgba(234,179,8,0.1); color:#fbbf24; border-radius:6px; font-size:0.9rem;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Warning: Changing these settings requires a bot restart to apply. Proceed with caution.
+                    </div>
+                    <div id="env-editor-container" style="display:flex; flex-direction:column; gap:0.8rem;">
+                        <!-- JS injected rows -->
+                    </div>
                 </div>
             </div>
         </main>
