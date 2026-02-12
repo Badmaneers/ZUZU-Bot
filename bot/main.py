@@ -6,6 +6,8 @@ import sys
 import logging
 import psutil
 from config import FLASK_SECRET_KEY, BASE_DIR
+from dotenv import dotenv_values
+import os
 from modules.dashboard import dashboard_bp, login_required
 
 # Configure basic logging for Main Process
@@ -23,8 +25,15 @@ def start_bot_worker():
     """Starts the bot worker process."""
     global BOT_PROCESS
     logging.info("Starting Bot Worker Process...")
+    
+    # Reload environment variables from .env file to ensure fresh config
+    # We pass this modified environment to the subprocess
+    env_updates = dotenv_values(os.path.join(BASE_DIR, '.env'))
+    current_env = os.environ.copy()
+    current_env.update(env_updates)
+    
     # Run bot/worker.py using the same python executable
-    BOT_PROCESS = subprocess.Popen([sys.executable, "bot/worker.py"])
+    BOT_PROCESS = subprocess.Popen([sys.executable, "bot/worker.py"], env=current_env)
 
 def monitor_bot_worker():
     """Monitors the worker and restarts it if it crashes."""
