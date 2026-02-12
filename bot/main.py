@@ -130,8 +130,8 @@ def api_stats_system():
     })
 
 def run_flask():
-    # Use PORT from environment or default to 8080
-    port = int(os.environ.get("PORT", 8080))
+    # Use PORT from environment or default to 5000
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":

@@ -193,11 +193,11 @@ def register_owner_commands(bot):
             try:
                 # Try to get public IP
                 ip = requests.get('https://api.ipify.org', timeout=5).text
-                url = f"http://{ip}:8080"
+                url = f"http://{ip}:5000"
             except Exception:
-                url = "http://YOUR_SERVER_IP:8080"
+                url = "http://YOUR_SERVER_IP:5000"
             
-        bot.reply_to(message, f"🖥️ **Dashboard Access**\n\nURL: {url}\n\n_Note: Ensure port 8080 is open and accessible._", parse_mode="Markdown")
+        bot.reply_to(message, f"🖥️ **Dashboard Access**\n\nURL: {url}\n\n_Note: Ensure port 5000 is open and accessible._", parse_mode="Markdown")
     
     @bot.message_handler(commands=['register'])
     def register_group(message):
