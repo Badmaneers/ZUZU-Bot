@@ -89,11 +89,24 @@ def handle_imagine(message):
 
 @bot.message_handler(content_types=['sticker'])
 def handle_sticker(message):
-    bot.reply_to(message, "Nice sticker! But you’ll need more than that to impress me.")
+    # Only reply if in a group and either:
+    if message.chat.type in ["group", "supergroup"]:
+        # If this sticker is a reply to a message
+        if message.reply_to_message:
+            # If replied to the bot
+            if message.reply_to_message.from_user and message.reply_to_message.from_user.id == bot.get_me().id:
+                bot.reply_to(message, "Nice sticker! But you’ll need more than that to impress me.")
+    elif message.chat.type == "private":
+        bot.reply_to(message, "Nice sticker! But you’ll need more than that to impress me.")
 
 @bot.message_handler(content_types=['animation'])
 def handle_gif(message):
-    bot.reply_to(message, "A GIF? Classic move. Still not as funny as my comebacks!")
+    if message.chat.type in ["group", "supergroup"]:
+        if message.reply_to_message:
+            if message.reply_to_message.from_user and message.reply_to_message.from_user.id == bot.get_me().id:
+                bot.reply_to(message, "A GIF? Classic move. Still not as funny as my comebacks!")
+    elif message.chat.type == "private":
+        bot.reply_to(message, "A GIF? Classic move. Still not as funny as my comebacks!")
 
 # --- Fallback & Auto-Moderation ---
 # This handler catches all text messages to perform moderation AND AI response.
