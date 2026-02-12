@@ -70,6 +70,31 @@ def api_status():
     status = "running" if BOT_PROCESS and BOT_PROCESS.poll() is None else "stopped"
     return flask.jsonify({"status": status})
 
+@app.route('/api/control/stop', methods=['POST'])
+@login_required
+def api_stop():
+    global BOT_PROCESS, SHOULD_RESTART
+    SHOULD_RESTART = False
+    if BOT_PROCESS:
+        logging.info("Stopping bot process via dashboard...")
+        BOT_PROCESS.terminate()
+        try:
+            BOT_PROCESS.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            BOT_PROCESS.kill()
+        BOT_PROCESS = None
+    return flask.jsonify({"success": True, "message": "Bot stopped."})
+
+@app.route('/api/control/start', methods=['POST'])
+@login_required
+def api_start():
+    global BOT_PROCESS, SHOULD_RESTART
+    if BOT_PROCESS and BOT_PROCESS.poll() is None:
+        return flask.jsonify({"success": False, "message": "Bot is already running."})
+    SHOULD_RESTART = True
+    threading.Thread(target=start_bot_worker).start()
+    return flask.jsonify({"success": True, "message": "Bot start signal sent."})
+
 def run_flask():
     app.run(host="0.0.0.0", port=8080)
 

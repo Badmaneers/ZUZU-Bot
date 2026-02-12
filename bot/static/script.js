@@ -472,3 +472,34 @@ async function refreshMemory() {
         await loadMemoryChat(currentMemoryKey);
     }
 }
+
+async function stopBot() {
+    if(!confirm("Are you sure you want to stop the bot process?")) return;
+    try {
+        const res = await fetch('/api/control/stop', {method: 'POST'});
+        const data = await res.json();
+        if(data.success) {
+            alert("Bot stopped.");
+            checkStatus();
+        } else {
+            alert("Error: " + data.message);
+        }
+    } catch(e) {
+        alert("Request failed: " + e);
+    }
+}
+
+async function startBot() {
+    try {
+        const res = await fetch('/api/control/start', {method: 'POST'});
+        const data = await res.json();
+        if(data.success) {
+            alert("Bot start signal sent.");
+            checkStatus();
+        } else {
+            alert("Error: " + data.message);
+        }
+    } catch(e) {
+        alert("Request failed: " + e);
+    }
+}
